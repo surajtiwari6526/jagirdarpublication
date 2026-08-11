@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Summary - Jagirdar Publications</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Noto Serif Devanagari', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fcf9f2', 100: '#f7f1e1', 200: '#eedfc0', 300: '#e3c696',
+                            400: '#d5a967', 500: '#c9a227', 600: '#b17b2f', 700: '#935d29',
+                            800: '#7A1F1F', 900: '#3B2A1D',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-brand-50 text-brand-900 font-sans">
+    <div class="min-h-screen flex items-center justify-center px-4 py-10">
+        <div class="w-full max-w-3xl rounded-3xl border border-brand-200 bg-white shadow-2xl p-8">
+            <h1 class="text-3xl font-serif font-bold text-brand-900">Order Summary</h1>
+            <p class="mt-2 text-sm text-brand-700">Review your selected book, quantity, and delivery details before checkout.</p>
+
+            <div class="mt-8 rounded-2xl border border-brand-200 bg-brand-50 p-6">
+                <div class="flex flex-col md:flex-row gap-6 items-start">
+                    <img src="images/cover1.png" alt="Book cover" class="w-full max-w-xs rounded-2xl object-cover shadow-md">
+                    <div class="flex-1">
+                        <h2 class="text-2xl font-serif font-bold text-brand-900">ब्रह्मांशावतार श्री खेतेश्वर दाता</h2>
+                        <p class="mt-3 text-sm leading-relaxed text-brand-700">Premium hardcover edition with spiritual insights, historical context, and divine life stories.</p>
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div class="rounded-xl bg-white p-3 border border-brand-200">
+                                <p class="text-xs uppercase tracking-[0.2em] text-brand-600">Quantity</p>
+                                <p id="summary-quantity" class="mt-1 text-lg font-semibold text-brand-900">1</p>
+                            </div>
+                            <div class="rounded-xl bg-white p-3 border border-brand-200">
+                                <p class="text-xs uppercase tracking-[0.2em] text-brand-600">Price</p>
+                                <p id="summary-price" class="mt-1 text-lg font-semibold text-brand-900">₹399</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 rounded-xl bg-white p-3 border border-brand-200">
+                            <p class="text-xs uppercase tracking-[0.2em] text-brand-600">Delivery Address</p>
+                            <p id="summary-address" class="mt-1 text-sm text-brand-700">Address will appear here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Apply Voucher Section -->
+            <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
+                <div class="flex items-center gap-2 mb-3 text-brand-900 font-semibold text-sm">
+                    <i class="fa-solid fa-ticket text-amber-700"></i>
+                    <span>Apply Voucher / Promo Code</span>
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="voucher-input" placeholder="Enter code e.g. KHETE100" class="flex-1 rounded-xl border border-brand-200 bg-white px-4 py-2.5 text-sm uppercase outline-none focus:border-brand-500">
+                    <button type="button" id="apply-voucher-btn" class="rounded-xl bg-brand-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-900">Apply</button>
+                </div>
+                <div id="available-vouchers-list" class="mt-2 flex flex-wrap gap-2 text-xs text-brand-700">
+                    <span>No active vouchers available right now.</span>
+                </div>
+                <p id="voucher-msg" class="mt-2 text-xs font-semibold"></p>
+            </div>
+
+            <div class="mt-8 flex flex-wrap gap-3">
+                <a href="address.html" class="rounded-2xl border border-brand-300 px-6 py-3 text-base font-semibold text-brand-800 transition hover:bg-brand-50">Back</a>
+                <button type="button" id="pay-now-btn" class="rounded-2xl bg-brand-800 px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-900 flex items-center gap-2">
+                    <span>Confirm Order</span>
+                    <i class="fa-solid fa-lock"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const addressData = JSON.parse(sessionStorage.getItem('bookAddress') || '{}');
+        const quantity = parseInt(sessionStorage.getItem('bookQuantity') || '1', 10);
+        const pricePerBook = 399;
+        const subtotal = pricePerBook * quantity;
+
+        const summaryAddress = document.getElementById('summary-address');
+        const summaryQuantity = document.getElementById('summary-quantity');
+        const summaryPrice = document.getElementById('summary-price');
+        const voucherInput = document.getElementById('voucher-input');
+        const applyVoucherBtn = document.getElementById('apply-voucher-btn');
+        const voucherMsg = document.getElementById('voucher-msg');
+
+        if (summaryQuantity) summaryQuantity.textContent = `${quantity} Copy${quantity > 1 ? 'ies' : ''}`;
+        
+        let discount = 0;
+        let appliedCode = '';
+
+        const updatePricing = () => {
+            const finalTotal = Math.max(0, subtotal - discount);
+            summaryPrice.innerHTML = discount > 0 
+                ? `<span class="line-through text-sm text-brand-500 mr-2">₹${subtotal}</span>₹${finalTotal} <span class="text-xs text-emerald-600 block">Saved ₹${discount}</span>`
+                : `₹${subtotal}`;
+
+            sessionStorage.setItem('bookDiscount', discount.toString());
+            sessionStorage.setItem('bookFinalTotal', finalTotal.toString());
+            sessionStorage.setItem('bookAppliedVoucher', appliedCode);
+        };
+
+        updatePricing();
+
+        const getAuth = () => {
+            try { return JSON.parse(sessionStorage.getItem('bookAuth') || 'null'); } catch(e) { return null; }
+        };
+        const getToken = () => localStorage.getItem('bookAuthToken') || '';
+
+        const renderCheckoutVouchers = async () => {
+            const listContainer = document.getElementById('available-vouchers-list');
+            let vouchers = [];
+
+            const token = getToken();
+            if (token) {
+                try {
+                    const res = await fetch('https://jagirdar.vercel.app/api/vouchers/my-vouchers', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success && data.vouchers) {
+                        vouchers = data.vouchers;
+                    }
+                } catch (e) {}
+            }
+
+            if (vouchers.length === 0) {
+                listContainer.innerHTML = `<span class="text-brand-600">You have no vouchers right now.</span>`;
+                return;
+            }
+
+            listContainer.innerHTML = `<span class="text-brand-700 font-medium">Available for you:</span> ` + vouchers.map(v => `
+                <button type="button" class="quick-code font-bold text-amber-800 underline hover:text-amber-900" data-code="${v.code}">${v.code}</button>
+            `).join(' • ');
+
+            listContainer.querySelectorAll('.quick-code').forEach(btn => {
+                btn.addEventListener('click', () => applyCode(btn.getAttribute('data-code')));
+            });
+        };
+
+        const applyCode = async (code) => {
+            const cleanCode = (code || '').trim().toUpperCase();
+            if (!cleanCode) {
+                voucherMsg.textContent = 'Please enter a voucher code.';
+                voucherMsg.className = 'mt-2 text-xs font-semibold text-red-600';
+                return;
+            }
+
+            applyVoucherBtn.disabled = true;
+            applyVoucherBtn.textContent = 'Evaluating...';
+            voucherMsg.textContent = 'Validating voucher code with server...';
+            voucherMsg.className = 'mt-2 text-xs font-semibold text-brand-700';
+
+            const userAuth = getAuth() || {};
+            const userMobile = userAuth.mobile || '';
+            const userId = userAuth.id || '';
+
+            try {
+                const res = await fetch('https://jagirdar.vercel.app/api/vouchers/apply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: cleanCode,
+                        cartAmount: subtotal,
+                        mobile: userMobile,
+                        userId: userId
+                    })
+                });
+
+                const data = await res.json();
+
+                applyVoucherBtn.disabled = false;
+                applyVoucherBtn.textContent = 'Apply';
+
+                if (!res.ok || !data.success) {
+                    discount = 0;
+                    appliedCode = '';
+                    updatePricing();
+                    throw new Error(data.error || 'Invalid voucher code.');
+                }
+
+                discount = data.discount;
+                appliedCode = data.code;
+                voucherInput.value = cleanCode;
+
+                voucherMsg.textContent = data.message || `Voucher ${cleanCode} applied! You saved ₹${discount}.`;
+                voucherMsg.className = 'mt-2 text-xs font-semibold text-emerald-600';
+                updatePricing();
+
+            } catch (err) {
+                applyVoucherBtn.disabled = false;
+                applyVoucherBtn.textContent = 'Apply';
+                voucherMsg.textContent = err.message || 'Invalid or expired voucher code.';
+                voucherMsg.className = 'mt-2 text-xs font-semibold text-red-600';
+            }
+        };
+
+        applyVoucherBtn.addEventListener('click', () => applyCode(voucherInput.value));
+
+        renderCheckoutVouchers();
+
+        // Pre-fill selected voucher if copied from account page
+        const preSelected = sessionStorage.getItem('selectedVoucher');
+        if (preSelected) {
+            applyCode(preSelected);
+        }
+
+        if (summaryAddress) {
+            const fullAddress = [
+                addressData.name,
+                addressData.address,
+                addressData.city,
+                addressData.pincode,
+                addressData.phone
+            ].filter(Boolean);
+
+            summaryAddress.innerHTML = fullAddress.length ? fullAddress.join('<br>') : 'Address not provided';
+        }
+
+        const payNowBtn = document.getElementById('pay-now-btn');
+        if (payNowBtn) {
+            payNowBtn.addEventListener('click', async () => {
+                const token = getToken();
+                if (!token) {
+                    alert('Please login to continue.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const shippingName = addressData.name || '';
+                const shippingMobile = addressData.phone || '';
+                const shippingAddress = addressData.address || '';
+                const shippingCity = addressData.city || '';
+                const shippingPincode = addressData.pincode || '';
+
+                if (!shippingName || !shippingMobile || !shippingAddress) {
+                    alert('Please provide complete delivery address. Go back and update your address.');
+                    return;
+                }
+
+                payNowBtn.disabled = true;
+                payNowBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
+                try {
+                    // 1. Create Draft Order
+                    const orderRes = await fetch('https://jagirdar.vercel.app/api/orders/create', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            quantity,
+                            shippingName,
+                            shippingMobile,
+                            shippingAddress,
+                            shippingCity,
+                            shippingPincode,
+                            voucherCode: appliedCode,
+                            paymentMethod: 'Razorpay'
+                        })
+                    });
+                    const orderData = await orderRes.json();
+                    
+                    if (!orderData.success) throw new Error(orderData.error || 'Failed to create order');
+
+                    // 2. Create Razorpay Order
+                    const rzpRes = await fetch('https://jagirdar.vercel.app/api/payment/razorpay/create-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ orderId: orderData.order.id })
+                    });
+                    const rzpData = await rzpRes.json();
+
+                    if (!rzpData.success) throw new Error(rzpData.error || 'Failed to initialize payment');
+
+                    // 3. Open Razorpay Checkout
+                    const options = {
+                        key: rzpData.key,
+                        amount: rzpData.amount,
+                        currency: rzpData.currency,
+                        name: 'Jagirdar Publications',
+                        description: 'Book Purchase',
+                        order_id: rzpData.razorpayOrderId,
+                        handler: async function (response) {
+                            try {
+                                payNowBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+
+                                // 4. Verify Payment
+                                const verifyRes = await fetch('https://jagirdar.vercel.app/api/payment/razorpay/verify', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`
+                                    },
+                                    body: JSON.stringify({
+                                        orderId: rzpData.orderId,
+                                        razorpayOrderId: response.razorpay_order_id,
+                                        razorpayPaymentId: response.razorpay_payment_id,
+                                        razorpaySignature: response.razorpay_signature
+                                    })
+                                });
+                                
+                                const verifyData = await verifyRes.json();
+                                if (verifyData.success) {
+                                    payNowBtn.innerHTML = '🎉 Payment Successful!';
+                                    sessionStorage.removeItem('bookQuantity');
+                                    sessionStorage.removeItem('bookAppliedVoucher');
+                                    sessionStorage.removeItem('bookDiscount');
+                                    sessionStorage.removeItem('bookFinalTotal');
+                                    setTimeout(() => window.location.href = `order-confirm.html?orderId=${rzpData.orderId}&amount=${rzpData.amount / 100}&method=Razorpay&paymentId=${response.razorpay_payment_id}`, 1000);
+                                } else {
+                                    throw new Error(verifyData.error || 'Payment verification failed');
+                                }
+                            } catch (err) {
+                                alert(err.message);
+                                payNowBtn.disabled = false;
+                                payNowBtn.innerHTML = '<span>Pay via Razorpay</span><i class="fa-solid fa-lock"></i>';
+                            }
+                        },
+                        prefill: {
+                            name: rzpData.customerName,
+                            contact: rzpData.customerMobile
+                        },
+                        theme: {
+                            color: '#7A1F1F'
+                        }
+                    };
+                    
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function (response) {
+                        alert('Payment Failed: ' + response.error.description);
+                        payNowBtn.disabled = false;
+                        payNowBtn.innerHTML = '<span>Pay via Razorpay</span><i class="fa-solid fa-lock"></i>';
+                    });
+                    rzp.open();
+
+                } catch (err) {
+                    alert(err.message);
+                    payNowBtn.disabled = false;
+                    payNowBtn.innerHTML = '<span>Pay via Razorpay</span><i class="fa-solid fa-lock"></i>';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+

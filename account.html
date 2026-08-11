@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account - Jagirdar Publications</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Firebase JS SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Noto Serif Devanagari', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fcf9f2', 100: '#f7f1e1', 200: '#eedfc0', 300: '#e3c696',
+                            400: '#d5a967', 500: '#c9a227', 600: '#b17b2f', 700: '#935d29',
+                            800: '#7A1F1F', 900: '#3B2A1D',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-brand-50 text-brand-900 font-sans">
+    
+    <!-- Top Header -->
+    <header class="bg-white border-b border-brand-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
+            <a href="index.html" class="flex items-center gap-3 group">
+                <img src="images/logo.png" alt="Jagirdar Publications" class="h-10 sm:h-12 w-auto object-contain" onerror="this.style.display='none'">
+                <div class="flex flex-col justify-center">
+                    <span class="font-serif font-bold text-xl sm:text-2xl text-brand-900 leading-none">Jagirdar</span>
+                    <span class="font-sans font-bold text-[9px] text-brand-500 tracking-[0.18em] uppercase mt-1">Publications</span>
+                </div>
+            </a>
+            
+            <div class="flex items-center gap-4">
+                <a href="index.html" class="text-sm font-semibold text-brand-700 hover:text-brand-900 transition flex items-center gap-2">
+                    <i class="fa-solid fa-house"></i>
+                    <span class="hidden sm:inline">Home</span>
+                </a>
+                <button id="logout-btn" type="button" class="rounded-full bg-brand-800 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-900 shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Sidebar Navigation -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- User Profile Brief Card -->
+                <div class="rounded-3xl border border-brand-200 bg-white p-6 shadow-xl text-center">
+                    <div class="mx-auto h-20 w-20 rounded-full bg-brand-800 text-brand-100 flex items-center justify-center text-3xl font-bold border-4 border-brand-100 shadow-md mb-4" id="avatar-initials">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <h2 id="sidebar-user-name" class="text-xl font-bold text-brand-900">User Name</h2>
+                    <p id="sidebar-user-mobile" class="text-sm text-brand-700 mt-1">+91 0000000000</p>
+                    <p id="sidebar-user-email" class="text-xs text-brand-600 mt-0.5 break-all">No email added</p>
+
+                    <div class="mt-4 pt-4 border-t border-brand-100 flex items-center justify-center gap-2">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Verified Account
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="rounded-3xl border border-brand-200 bg-white p-3 shadow-lg space-y-1">
+                    <button class="nav-tab active w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition text-left" data-tab="details">
+                        <i class="fa-solid fa-id-card text-lg w-6 text-brand-800"></i>
+                        <span>Account Details</span>
+                    </button>
+                    <button class="nav-tab w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition text-left text-brand-700 hover:bg-brand-50" data-tab="addresses">
+                        <i class="fa-solid fa-location-dot text-lg w-6 text-brand-800"></i>
+                        <span>My Addresses</span>
+                    </button>
+                    <button class="nav-tab w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition text-left text-brand-700 hover:bg-brand-50" data-tab="orders">
+                        <i class="fa-solid fa-box-archive text-lg w-6 text-brand-800"></i>
+                        <span>Order History</span>
+                        <span id="order-badge" class="ml-auto bg-brand-100 text-brand-800 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                    <button class="nav-tab w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-semibold text-sm transition text-left text-brand-700 hover:bg-brand-50" data-tab="vouchers">
+                        <i class="fa-solid fa-ticket text-lg w-6 text-brand-800"></i>
+                        <span>My Vouchers</span>
+                        <span id="voucher-badge" class="ml-auto bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="lg:col-span-3">
+                
+                <!-- TAB 1: Account Details -->
+                <div id="tab-details" class="tab-content rounded-3xl border border-brand-200 bg-white p-6 sm:p-8 shadow-xl">
+                    <div class="flex items-center justify-between pb-6 border-b border-brand-100">
+                        <div>
+                            <h1 class="text-2xl font-serif font-bold text-brand-900">Personal Information</h1>
+                            <p class="text-sm text-brand-700 mt-1">Manage your account details and contact information.</p>
+                        </div>
+                    </div>
+
+                    <form id="profile-form" class="mt-8 space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label for="profile-name" class="block text-sm font-semibold text-brand-800 mb-2">Full Name</label>
+                                <div class="relative">
+                                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-500">
+                                        <i class="fa-solid fa-user"></i>
+                                    </span>
+                                    <input type="text" id="profile-name" class="w-full pl-11 pr-4 py-3 rounded-2xl border border-brand-200 bg-brand-50 text-brand-900 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition" placeholder="Enter full name" required>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <label for="profile-mobile" class="block text-sm font-semibold text-brand-800">Mobile Number</label>
+                                    <span id="mobile-verify-badge" class="hidden text-xs font-bold px-2.5 py-1 rounded-full"></span>
+                                </div>
+                                <div class="relative flex items-center">
+                                    <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-500">
+                                        <i class="fa-solid fa-phone"></i>
+                                    </span>
+                                    <input type="tel" id="profile-mobile" class="w-full pl-11 pr-4 py-3 rounded-2xl border border-brand-200 bg-brand-50 text-brand-900 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition" placeholder="Enter mobile number" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <label for="profile-email" class="block text-sm font-semibold text-brand-800">Email Address</label>
+                                <span id="email-verify-badge" class="hidden text-xs font-bold px-2.5 py-1 rounded-full"></span>
+                            </div>
+                            <div class="relative flex items-center">
+                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-brand-500">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </span>
+                                <input type="email" id="profile-email" class="w-full pl-11 pr-36 py-3 rounded-2xl border border-brand-200 bg-brand-50 text-brand-900 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition" placeholder="name@example.com">
+                                <button type="button" id="send-email-otp-btn" class="absolute right-2 top-1.5 bottom-1.5 px-4 rounded-xl bg-brand-800 text-white text-xs font-bold transition hover:bg-brand-900 shadow flex items-center gap-1">
+                                    <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                                    <span>Verify Email</span>
+                                </button>
+                            </div>
+                            <p id="email-status-text" class="text-xs text-brand-600 mt-2">Adding a verified email ensures you receive order confirmations and tracking updates via Firebase & SMTP.</p>
+                        </div>
+
+                        <!-- Address section moved to My Addresses Tab -->
+
+                        <div class="pt-4 flex items-center gap-4">
+                            <button type="submit" class="rounded-2xl bg-brand-800 px-8 py-3.5 text-base font-bold text-white transition hover:bg-brand-900 shadow-lg shadow-brand-800/20 flex items-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i>
+                                <span>Save Changes</span>
+                            </button>
+                            <p id="save-status" class="text-sm font-semibold transition"></p>
+                        </div>
+                    </form>
+
+                    <!-- Danger Zone -->
+                    <div class="mt-12 pt-8 border-t border-red-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-red-700">Danger Zone</h3>
+                                <p class="text-xs text-red-500 mt-1">Permanently delete your account and all associated data.</p>
+                            </div>
+                            <button id="delete-account-btn" type="button" class="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 transition hover:bg-red-600 hover:text-white shadow-sm flex items-center gap-2">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span>Delete Account</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: My Addresses -->
+                <div id="tab-addresses" class="tab-content hidden rounded-3xl border border-brand-200 bg-white p-6 sm:p-8 shadow-xl">
+                    <div class="flex items-center justify-between pb-6 border-b border-brand-100">
+                        <div>
+                            <h1 class="text-2xl font-serif font-bold text-brand-900">My Addresses</h1>
+                            <p class="text-sm text-brand-700 mt-1">Manage your saved delivery addresses.</p>
+                        </div>
+                        <button id="add-new-address-btn" class="px-4 py-2 bg-brand-800 text-white rounded-xl text-sm font-bold shadow hover:bg-brand-900 transition flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Add New
+                        </button>
+                    </div>
+                    
+                    <!-- Add Address Form (Hidden by default) -->
+                    <div id="add-address-form-container" class="hidden mt-6 bg-brand-50 p-6 rounded-2xl border border-brand-200">
+                        <h3 class="text-lg font-bold text-brand-900 mb-4">Add a New Address</h3>
+                        <form id="new-address-form" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-brand-800 mb-1">Full Name</label>
+                                    <input type="text" id="new-addr-name" required class="w-full px-4 py-2 rounded-xl border border-brand-200 bg-white text-sm outline-none focus:border-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-brand-800 mb-1">Mobile Number</label>
+                                    <input type="tel" id="new-addr-mobile" required class="w-full px-4 py-2 rounded-xl border border-brand-200 bg-white text-sm outline-none focus:border-brand-500">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-brand-800 mb-1">Full Address (House, Street)</label>
+                                <textarea id="new-addr-address" required rows="2" class="w-full px-4 py-2 rounded-xl border border-brand-200 bg-white text-sm outline-none focus:border-brand-500"></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-brand-800 mb-1">City</label>
+                                    <input type="text" id="new-addr-city" required class="w-full px-4 py-2 rounded-xl border border-brand-200 bg-white text-sm outline-none focus:border-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-brand-800 mb-1">PIN Code</label>
+                                    <input type="text" id="new-addr-pincode" required class="w-full px-4 py-2 rounded-xl border border-brand-200 bg-white text-sm outline-none focus:border-brand-500">
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 pt-2">
+                                <button type="submit" class="px-5 py-2 bg-brand-800 text-white font-bold rounded-xl text-sm transition hover:bg-brand-900">Save Address</button>
+                                <button type="button" id="cancel-add-address-btn" class="px-5 py-2 bg-white border border-brand-300 text-brand-800 font-bold rounded-xl text-sm hover:bg-brand-50">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Addresses List -->
+                    <div id="addresses-list-container" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Fetched addresses go here -->
+                    </div>
+                </div>
+
+                <!-- TAB 2: Order History -->
+                <div id="tab-orders" class="tab-content hidden rounded-3xl border border-brand-200 bg-white p-6 sm:p-8 shadow-xl">
+                    <div class="flex items-center justify-between pb-6 border-b border-brand-100">
+                        <div>
+                            <h1 class="text-2xl font-serif font-bold text-brand-900">Order History</h1>
+                            <p class="text-sm text-brand-700 mt-1">Track your active and previous book purchases.</p>
+                        </div>
+                    </div>
+
+                    <!-- Orders List Container -->
+                    <div id="orders-container" class="mt-8 space-y-6">
+                        <!-- Dynamic orders injected here -->
+                    </div>
+                </div>
+
+                <!-- TAB 3: My Vouchers -->
+                <div id="tab-vouchers" class="tab-content hidden rounded-3xl border border-brand-200 bg-white p-6 sm:p-8 shadow-xl">
+                    <div class="flex items-center justify-between pb-6 border-b border-brand-100">
+                        <div>
+                            <h1 class="text-2xl font-serif font-bold text-brand-900">My Discount Vouchers</h1>
+                            <p class="text-sm text-brand-700 mt-1">Available promotional coupons and admin gift vouchers for your orders.</p>
+                        </div>
+                    </div>
+
+                    <!-- Vouchers List Grid -->
+                    <div id="vouchers-container" class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Dynamic vouchers injected here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Email Verification OTP Modal -->
+    <div id="email-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-brand-200 shadow-2xl space-y-5 relative">
+            <button id="close-email-modal" type="button" class="absolute top-4 right-4 text-brand-500 hover:text-brand-900 text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center">
+                <div class="mx-auto h-12 w-12 rounded-2xl bg-brand-100 text-brand-800 flex items-center justify-center text-xl mb-3">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+                <h3 class="text-xl font-serif font-bold text-brand-900">Verify Email Address</h3>
+                <p id="email-modal-subtitle" class="text-sm text-brand-700 mt-1">Enter the 6-digit verification code sent to your email.</p>
+            </div>
+            <div>
+                <input id="email-otp-input" type="text" maxlength="6" inputmode="numeric" placeholder="Enter 6-digit OTP" class="w-full py-3 px-4 rounded-2xl border border-brand-200 bg-brand-50 text-center text-2xl font-bold tracking-widest outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
+            </div>
+            <button id="verify-email-otp-btn" type="button" class="w-full rounded-2xl bg-brand-800 py-3.5 text-white font-bold hover:bg-brand-900 transition shadow-lg shadow-brand-800/20">
+                Verify & Confirm Email
+            </button>
+            <p id="email-modal-status" class="text-center text-xs font-semibold text-brand-700"></p>
+        </div>
+    </div>
+
+    <!-- Script Section placed at end of body to ensure DOM elements exist -->
+    <script>
+        // User's Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCTYHfr_fl6qqvbvvh3o48Cn-vXgfkA4TA",
+            authDomain: "jagidar-publication.firebaseapp.com",
+            projectId: "jagidar-publication",
+            storageBucket: "jagidar-publication.firebasestorage.app",
+            messagingSenderId: "602959526619",
+            appId: "1:602959526619:web:ba370974d756be81d26afe",
+            measurementId: "G-13J5JYQF4P"
+        };
+        const API_BASE = "https://jagirdar.vercel.app";
+
+        // Initialize Firebase safely
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const getAuth = () => {
+            try {
+                return JSON.parse(sessionStorage.getItem('bookAuth')) || null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const getToken = () => localStorage.getItem('bookAuthToken') || '';
+
+        const authUser = getAuth();
+        if (!authUser) {
+            window.location.href = 'login.html?redirect=account.html';
+        }
+
+        const nameInput = document.getElementById('profile-name');
+        const mobileInput = document.getElementById('profile-mobile');
+        const emailInput = document.getElementById('profile-email');
+        const addressInput = document.getElementById('profile-address');
+        const sidebarName = document.getElementById('sidebar-user-name');
+        const sidebarMobile = document.getElementById('sidebar-user-mobile');
+        const sidebarEmail = document.getElementById('sidebar-user-email');
+        const avatarInitials = document.getElementById('avatar-initials');
+        const emailVerifyBadge = document.getElementById('email-verify-badge');
+        const mobileVerifyBadge = document.getElementById('mobile-verify-badge');
+        const sendEmailOtpBtn = document.getElementById('send-email-otp-btn');
+
+        const emailModal = document.getElementById('email-modal');
+        const closeEmailModal = document.getElementById('close-email-modal');
+        const emailOtpInput = document.getElementById('email-otp-input');
+        const verifyEmailOtpBtn = document.getElementById('verify-email-otp-btn');
+        const emailModalStatus = document.getElementById('email-modal-status');
+        const emailModalSubtitle = document.getElementById('email-modal-subtitle');
+
+        const updateEmailVerificationStatus = (user) => {
+            if (!emailVerifyBadge || !sendEmailOtpBtn) return;
+
+            const email = (user && user.email ? user.email : '').trim();
+            const isEmailVerified = user && (user.is_email_verified === 1 || user.is_email_verified === '1');
+
+            if (!email) {
+                emailVerifyBadge.classList.add('hidden');
+                sendEmailOtpBtn.classList.add('hidden');
+            } else {
+                emailVerifyBadge.classList.remove('hidden');
+                sendEmailOtpBtn.classList.remove('hidden');
+
+                if (isEmailVerified) {
+                    emailVerifyBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+                    emailVerifyBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> Email Verified';
+                    sendEmailOtpBtn.className = 'absolute right-2 top-1.5 bottom-1.5 px-3 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold cursor-default flex items-center gap-1 border border-emerald-300';
+                    sendEmailOtpBtn.innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i> Verified';
+                    sendEmailOtpBtn.disabled = true;
+                } else {
+                    emailVerifyBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1';
+                    emailVerifyBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Unverified';
+                    sendEmailOtpBtn.className = 'absolute right-2 top-1.5 bottom-1.5 px-4 rounded-xl bg-brand-800 text-white text-xs font-bold transition hover:bg-brand-900 shadow flex items-center gap-1';
+                    sendEmailOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-[10px]"></i> Verify Email';
+                    sendEmailOtpBtn.disabled = false;
+                }
+            }
+
+            if (mobileVerifyBadge) {
+                const mobile = (user && user.mobile ? user.mobile : '').trim();
+                const isMobileVerified = user && (user.is_mobile_verified === 1 || user.is_mobile_verified === '1');
+                
+                if (!mobile) {
+                    mobileVerifyBadge.classList.add('hidden');
+                } else {
+                    mobileVerifyBadge.classList.remove('hidden');
+                    if (isMobileVerified) {
+                        mobileVerifyBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+                        mobileVerifyBadge.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> Mobile Verified';
+                    } else {
+                        mobileVerifyBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1';
+                        mobileVerifyBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Unverified';
+                    }
+                }
+            }
+        };
+
+        const populateUserData = () => {
+            const currentAuth = getAuth() || {};
+            if (nameInput) nameInput.value = currentAuth.name || '';
+            if (mobileInput) mobileInput.value = currentAuth.mobile || '';
+            if (emailInput) emailInput.value = currentAuth.email || '';
+            if (addressInput) addressInput.value = currentAuth.address || '';
+
+            if (sidebarName) sidebarName.textContent = currentAuth.name || 'User';
+            if (sidebarMobile) sidebarMobile.textContent = currentAuth.mobile ? `+91 ${currentAuth.mobile}` : 'No phone';
+            if (sidebarEmail) sidebarEmail.textContent = currentAuth.email || 'No email added';
+
+            if (avatarInitials) {
+                if (currentAuth.name) {
+                    avatarInitials.textContent = currentAuth.name.charAt(0).toUpperCase();
+                } else {
+                    avatarInitials.innerHTML = '<i class="fa-solid fa-user"></i>';
+                }
+            }
+
+            updateEmailVerificationStatus(currentAuth);
+        };
+
+        const fetchLatestProfile = async () => {
+            const token = localStorage.getItem('bookAuthToken');
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/profile`, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success && data.user) {
+                        sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch latest profile:', err);
+                }
+            }
+            populateUserData();
+        };
+
+        fetchLatestProfile();
+        if (emailInput) {
+            emailInput.addEventListener('input', () => {
+                const currentAuth = getAuth() || {};
+                if (emailInput.value.trim() !== (currentAuth.email || '')) {
+                    if (emailVerifyBadge) {
+                        emailVerifyBadge.className = 'text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1';
+                        emailVerifyBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Unverified';
+                        emailVerifyBadge.classList.remove('hidden');
+                    }
+                    if (sendEmailOtpBtn) {
+                        sendEmailOtpBtn.classList.remove('hidden');
+                        sendEmailOtpBtn.disabled = false;
+                        sendEmailOtpBtn.className = 'absolute right-2 top-1.5 bottom-1.5 px-4 rounded-xl bg-brand-800 text-white text-xs font-bold transition hover:bg-brand-900 shadow flex items-center gap-1';
+                        sendEmailOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-[10px]"></i> Verify Email';
+                    }
+                }
+            });
+        }
+
+        // Handle Send Email OTP Click
+        if (sendEmailOtpBtn) {
+            sendEmailOtpBtn.addEventListener('click', async () => {
+                const targetEmail = emailInput ? emailInput.value.trim() : '';
+                if (!targetEmail || !targetEmail.includes('@')) {
+                    alert('Please enter a valid email address first.');
+                    return;
+                }
+
+                sendEmailOtpBtn.disabled = true;
+                sendEmailOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+
+                try {
+                    // 1. Try Firebase Email Link Authentication
+                    if (typeof firebase !== 'undefined' && firebase.auth) {
+                        try {
+                            const actionCodeSettings = {
+                                url: window.location.href,
+                                handleCodeInApp: true
+                            };
+                            await firebase.auth().sendSignInLinkToEmail(targetEmail, actionCodeSettings);
+                            window.localStorage.setItem('emailForSignIn', targetEmail);
+                            console.log('[Firebase Email Verification Link Sent]');
+                        } catch (fbErr) {
+                            console.warn('[Firebase Email Auth Notice]:', fbErr.message);
+                        }
+                    }
+
+                    // 2. Dispatch Server Email Verification OTP
+                    const token = getToken();
+                    const res = await fetch(`${API_BASE}/api/auth/send-email-otp`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ email: targetEmail })
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.error || 'Failed to send email verification OTP');
+                    }
+
+                    if (emailModalSubtitle) {
+                        emailModalSubtitle.textContent = `Enter the 6-digit code sent to ${targetEmail}`;
+                    }
+
+                    if (emailModalStatus) {
+                        emailModalStatus.textContent = `📧 Verification code sent to ${targetEmail}. Please check your email inbox.`;
+                        emailModalStatus.className = 'text-center text-xs font-semibold text-emerald-700 mt-2';
+                    }
+
+                    if (emailOtpInput) emailOtpInput.value = '';
+                    if (emailModal) emailModal.classList.remove('hidden');
+                    if (emailOtpInput) emailOtpInput.focus();
+
+                } catch (err) {
+                    alert(err.message || 'Error sending email verification code.');
+                } finally {
+                    sendEmailOtpBtn.disabled = false;
+                    sendEmailOtpBtn.innerHTML = '<i class="fa-solid fa-paper-plane text-[10px]"></i> Verify Email';
+                }
+            });
+        }
+
+        if (closeEmailModal) {
+            closeEmailModal.addEventListener('click', () => {
+                if (emailModal) emailModal.classList.add('hidden');
+            });
+        }
+
+        if (verifyEmailOtpBtn) {
+            verifyEmailOtpBtn.addEventListener('click', async () => {
+                const targetEmail = emailInput ? emailInput.value.trim() : '';
+                const otpCode = emailOtpInput ? emailOtpInput.value.trim() : '';
+
+                if (!otpCode || otpCode.length < 4) {
+                    if (emailModalStatus) {
+                        emailModalStatus.textContent = 'Please enter the exact 6-digit verification code.';
+                        emailModalStatus.className = 'text-center text-xs font-semibold text-red-600 mt-2';
+                    }
+                    return;
+                }
+
+                verifyEmailOtpBtn.disabled = true;
+                verifyEmailOtpBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+
+                try {
+                    const token = getToken();
+                    const res = await fetch(`${API_BASE}/api/auth/verify-email-otp`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ email: targetEmail, otp: otpCode })
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.error || 'Email OTP verification failed.');
+                    }
+
+                    sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    populateUserData();
+
+                    if (emailModalStatus) {
+                        emailModalStatus.textContent = '🎉 Email Verified Successfully!';
+                        emailModalStatus.className = 'text-center text-xs font-bold text-emerald-600 mt-2';
+                    }
+
+                    setTimeout(() => {
+                        if (emailModal) emailModal.classList.add('hidden');
+                    }, 1000);
+
+                } catch (err) {
+                    if (emailModalStatus) {
+                        emailModalStatus.textContent = err.message || 'Invalid verification code.';
+                        emailModalStatus.className = 'text-center text-xs font-semibold text-red-600 mt-2';
+                    }
+                } finally {
+                    verifyEmailOtpBtn.disabled = false;
+                    verifyEmailOtpBtn.innerHTML = 'Verify & Confirm Email';
+                }
+            });
+        }
+
+        // Save Profile API Call
+        const profileForm = document.getElementById('profile-form');
+        const saveStatus = document.getElementById('save-status');
+
+        if (profileForm) {
+            profileForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const updated = {
+                    ...getAuth(),
+                    name: nameInput ? nameInput.value.trim() : '',
+                    mobile: mobileInput ? mobileInput.value.trim() : '',
+                    email: emailInput ? emailInput.value.trim() : '',
+                    address: addressInput ? addressInput.value.trim() : ''
+                };
+
+                try {
+                    const token = getToken();
+                    if (token) {
+                        const res = await fetch(`${API_BASE}/api/auth/profile`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(updated)
+                        });
+                        const data = await res.json();
+                        if (data.user) {
+                            sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                            populateUserData();
+                        }
+                    }
+                } catch (e) {}
+
+                if (saveStatus) {
+                    saveStatus.textContent = 'Account details updated successfully!';
+                    saveStatus.className = 'text-sm font-semibold text-emerald-600';
+                    setTimeout(() => {
+                        saveStatus.textContent = '';
+                    }, 3000);
+                }
+            });
+        }
+
+        // Tab Switching Logic
+        const tabs = document.querySelectorAll('.nav-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('active', 'bg-brand-800', 'text-white');
+                    t.classList.add('text-brand-700', 'hover:bg-brand-50');
+                    t.querySelector('i').classList.remove('text-white');
+                    t.querySelector('i').classList.add('text-brand-800');
+                });
+                tabContents.forEach(c => c.classList.add('hidden'));
+
+                tab.classList.add('active', 'bg-brand-800', 'text-white');
+                tab.classList.remove('text-brand-700', 'hover:bg-brand-50');
+                tab.querySelector('i').classList.remove('text-brand-800');
+                tab.querySelector('i').classList.add('text-white');
+
+                const targetTab = tab.getAttribute('data-tab');
+                const targetElement = document.getElementById(`tab-${targetTab}`);
+                if (targetElement) targetElement.classList.remove('hidden');
+
+                if (targetTab === 'vouchers') {
+                    sessionStorage.setItem('viewedVouchers', 'true');
+                }
+            });
+        });
+
+        // Load Orders
+        const ordersContainer = document.getElementById('orders-container');
+        const orderBadge = document.getElementById('order-badge');
+
+        const loadOrders = async () => {
+            let orders = [];
+            const token = getToken();
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/orders/my-orders`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success && data.orders) {
+                        orders = data.orders;
+                    }
+                } catch (e) {}
+            }
+
+            if (orders.length === 0) {
+                try {
+                    orders = JSON.parse(sessionStorage.getItem('bookOrders') || '[]');
+                } catch (e) {}
+            }
+
+            if (orderBadge) orderBadge.textContent = orders.length.toString();
+
+            if (!ordersContainer) return;
+
+            if (orders.length === 0) {
+                ordersContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <i class="fa-solid fa-box-open text-4xl text-brand-300 mb-3"></i>
+                        <h3 class="text-lg font-bold text-brand-900">No Orders Found</h3>
+                        <p class="text-sm text-brand-700 mt-1">You haven't placed any book orders yet.</p>
+                        <a href="order.html" class="mt-4 inline-block px-6 py-2.5 rounded-2xl bg-brand-800 text-white font-semibold text-sm">Order Now</a>
+                    </div>
+                `;
+                return;
+            }
+
+            ordersContainer.innerHTML = orders.map(o => {
+                const s = o.status;
+                const isCancelled = s === 'CANCELLED';
+                const step1 = !isCancelled;
+                const step2 = ['PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(s);
+                const step3 = ['IN_TRANSIT', 'DELIVERED'].includes(s);
+                const step4 = s === 'DELIVERED';
+                
+                let progress = 0;
+                if (step4) progress = 100;
+                else if (step3) progress = 66;
+                else if (step2) progress = 33;
+                else if (step1) progress = 0;
+
+                const renderStep = (title, icon, completed) => {
+                    const bg = completed ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-brand-300 border-brand-200';
+                    const text = completed ? 'text-brand-900 font-bold' : 'text-brand-400 font-medium';
+                    return `
+                        <div class="flex flex-col items-center relative z-10 w-16 sm:w-20">
+                            <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 flex items-center justify-center text-xs sm:text-sm ${bg} transition-colors bg-white">
+                                <i class="fa-solid ${icon}"></i>
+                            </div>
+                            <span class="mt-2 text-[10px] sm:text-xs text-center ${text} leading-tight">${title}</span>
+                        </div>
+                    `;
+                };
+
+                return `
+                <div class="rounded-3xl border border-brand-200 bg-white p-6 hover:shadow-lg transition duration-300 overflow-hidden relative">
+                    <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-brand-100">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-brand-600">Order ID: #${o.id}</span>
+                            <p class="text-[11px] text-brand-500 mt-0.5">Placed on ${o.created_at ? o.created_at.slice(0,10) : (o.date || 'Recent')}</p>
+                        </div>
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                            s === 'DELIVERED' || s === 'Delivered' ? 'bg-emerald-100 text-emerald-800' : 
+                            (isCancelled ? 'bg-red-100 text-red-800' : (s === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'))
+                        } gap-1.5 shadow-sm">
+                            <span class="h-2 w-2 rounded-full ${
+                                s === 'DELIVERED' || s === 'Delivered' ? 'bg-emerald-500' : 
+                                (isCancelled ? 'bg-red-500' : (s === 'IN_TRANSIT' ? 'bg-blue-500' : 'bg-amber-500'))
+                            }"></span>
+                            ${s === 'IN_TRANSIT' ? 'SHIPPED' : s}
+                        </span>
+                    </div>
+
+                    <div class="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-4">
+                            <img src="images/cover1.png" alt="Book cover" class="h-16 w-12 object-cover rounded-xl shadow-sm border border-brand-200">
+                            <div>
+                                <h4 class="font-serif font-bold text-brand-900">${o.book_title || o.bookTitle || 'Book Title'}</h4>
+                                <p class="text-xs text-brand-600 mt-0.5">Qty: ${o.quantity} &bull; ${o.payment_method || o.paymentMethod || 'UPI'}</p>
+                            </div>
+                        </div>
+                        <div class="text-left sm:text-right">
+                            <p class="text-[10px] uppercase font-bold text-brand-500 tracking-wide">Total Amount</p>
+                            <p class="text-lg font-bold text-brand-900">₹${o.total_amount || o.total}</p>
+                        </div>
+                    </div>
+
+                    <!-- Order Progress Tracker -->
+                    ${isCancelled ? `
+                        <div class="mt-2 p-3 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-xmark"></i></div>
+                            <div>
+                                <p class="text-sm font-bold text-red-800">Order Cancelled</p>
+                                <p class="text-xs text-red-600 mt-0.5">This order has been cancelled and will not be delivered.</p>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="mt-2 pt-6 pb-2 relative px-2 sm:px-8">
+                            <div class="absolute top-[42px] sm:top-[46px] left-[10%] right-[10%] h-1 bg-brand-100 rounded-full z-0"></div>
+                            <div class="absolute top-[42px] sm:top-[46px] left-[10%] h-1 bg-emerald-500 rounded-full z-0 transition-all duration-700 ease-in-out" style="width: ${progress * 0.8}%"></div>
+                            
+                            <div class="flex justify-between relative z-10">
+                                ${renderStep('Ordered', 'fa-clipboard-check', step1)}
+                                ${renderStep('Processing', 'fa-box-open', step2)}
+                                ${renderStep('Shipped', 'fa-truck-fast', step3)}
+                                ${renderStep('Delivered', 'fa-house-circle-check', step4)}
+                            </div>
+                        </div>
+                    `}
+
+                    <div class="mt-4 pt-4 border-t border-brand-100 flex flex-wrap items-center justify-between gap-4 text-xs bg-brand-50/50 -mx-6 px-6 py-4 transition-all" id="footer-${o.id}">
+                        <span class="text-brand-700 font-medium flex items-center"><i class="fa-solid fa-truck-fast mr-1.5 text-brand-600"></i> Tracking ID: <strong class="text-brand-900 bg-white px-2 py-1 rounded border border-brand-200 ml-1">${(o.tracking_number && o.tracking_number !== o.id && o.tracking_number !== 'PENDING' && o.tracking_number !== 'Not Assigned') ? o.tracking_number : 'Your tracking id is in progress'}</strong></span>
+                        <div class="flex items-center gap-3">
+                            ${step4 ? '<span class="text-emerald-700 font-bold"><i class="fa-solid fa-check-circle mr-1"></i> Delivered</span>' : ''}
+                            <a href="bill.html?id=${o.id}" target="_blank" onclick="try{localStorage.setItem('bookOrders', sessionStorage.getItem('bookOrders') || '[]')}catch(e){}" class="text-brand-700 hover:text-white hover:bg-brand-800 font-bold flex items-center gap-1.5 transition px-3 py-1.5 bg-white border border-brand-200 rounded-lg shadow-sm hover:shadow"><i class="fa-solid fa-file-invoice"></i> View Bill</a>
+                            <button onclick="toggleOrderDetails('${o.id}')" class="text-brand-800 hover:text-brand-900 font-bold flex items-center gap-1.5 transition px-3 py-1.5 bg-white border border-brand-200 rounded-lg shadow-sm hover:shadow">More Details <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300" id="chevron-${o.id}"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Expanded Details Section -->
+                    <div id="details-${o.id}" class="hidden -mx-6 -mb-6 px-6 pb-6 pt-4 bg-brand-50/80 border-t border-brand-100">
+                        <h5 class="text-sm font-bold text-brand-900 mb-4 flex items-center gap-2"><i class="fa-solid fa-circle-info text-brand-500"></i> Complete Order Details</h5>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-5 rounded-2xl border border-brand-100 shadow-sm">
+                            <div class="space-y-1">
+                                <p class="text-[10px] uppercase font-bold text-brand-500 tracking-wider mb-2">Shipping Address</p>
+                                <p class="text-xs text-brand-900 font-bold">${o.shipping_name || 'N/A'}</p>
+                                <p class="text-xs text-brand-700 leading-relaxed max-w-[250px]">${o.shipping_address || 'N/A'}</p>
+                                <p class="text-xs text-brand-700">${o.shipping_city ? o.shipping_city + ' - ' : ''}${o.shipping_pincode || ''}</p>
+                                <p class="text-xs text-brand-800 font-bold mt-2"><i class="fa-solid fa-phone text-brand-400 mr-1"></i> +91 ${o.shipping_mobile || 'N/A'}</p>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-[10px] uppercase font-bold text-brand-500 tracking-wider mb-2">Payment Details</p>
+                                <p class="text-xs text-brand-700">Method: <strong class="text-brand-900">${o.payment_method || 'N/A'}</strong></p>
+                                <p class="text-xs text-brand-700 mt-1 flex flex-col items-start gap-1">Transaction ID: <span class="font-mono text-[10px] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-700 break-all max-w-full">${o.razorpay_payment_id || o.utr || 'N/A'}</span></p>
+                                <p class="text-xs text-brand-700 mt-1">Order Date: <strong class="text-brand-900">${o.created_at ? new Date(o.created_at).toLocaleString() : 'N/A'}</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        };
+
+        window.toggleOrderDetails = (id) => {
+            const detailsDiv = document.getElementById(`details-${id}`);
+            const chevron = document.getElementById(`chevron-${id}`);
+            if (detailsDiv.classList.contains('hidden')) {
+                detailsDiv.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                detailsDiv.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        };
+
+        loadOrders();
+
+        // Render Vouchers
+        const renderVouchers = async () => {
+            const vouchersContainer = document.getElementById('vouchers-container');
+            const voucherBadge = document.getElementById('voucher-badge');
+            let vouchers = [];
+
+            const token = getToken();
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/vouchers/my-vouchers`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success && data.vouchers) {
+                        vouchers = data.vouchers;
+                    }
+                } catch (e) {}
+            }
+
+            if (voucherBadge) voucherBadge.textContent = vouchers.length.toString();
+
+            if (!vouchersContainer) return;
+
+            if (vouchers.length === 0) {
+                vouchersContainer.innerHTML = `
+                    <div class="col-span-full text-center py-12 px-4 rounded-3xl bg-brand-50/60 border border-dashed border-brand-200">
+                        <div class="mx-auto h-16 w-16 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-2xl mb-4 shadow-sm">
+                            <i class="fa-solid fa-ticket-simple"></i>
+                        </div>
+                        <h3 class="text-lg font-serif font-bold text-brand-900">No Vouchers Available</h3>
+                        <p class="text-sm text-brand-700 mt-1 max-w-md mx-auto">There are currently no active vouchers assigned to your account. Admin assigned vouchers will appear here automatically.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            vouchersContainer.innerHTML = vouchers.map(v => `
+                <div class="rounded-3xl border ${v.is_personal ? 'border-red-400 bg-gradient-to-br from-red-50 via-amber-50 to-orange-50 ring-2 ring-red-300' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50'} p-6 relative overflow-hidden shadow-md">
+                    ${v.is_personal ? `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-red-600 text-white uppercase tracking-wider mb-3 shadow-sm"><i class="fa-solid fa-gift"></i> GIFT VOUCHER ASSIGNED BY ADMIN</span>` : ''}
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-800 text-white uppercase tracking-wider mb-2">
+                                ${v.discount_type === 'FLAT' ? '₹' + v.discount_value + ' FLAT OFF' : v.discount_value + '% DISCOUNT'}
+                            </span>
+                            <h3 class="text-xl font-serif font-bold text-brand-900">${v.code}</h3>
+                            <p class="text-xs text-brand-700 mt-1">Min Order: ₹${v.min_order_amount}</p>
+                        </div>
+                        <div class="text-2xl text-amber-600"><i class="fa-solid fa-ticket"></i></div>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-amber-200/60 flex items-center justify-between">
+                        <span class="text-xs text-brand-600 font-semibold">${v.is_personal ? '🎁 Special Admin Gift for You' : 'Valid Coupon'}</span>
+                        <button type="button" class="copy-voucher-btn px-4 py-2 text-xs font-bold rounded-xl bg-amber-800 text-white hover:bg-amber-900 transition flex items-center gap-1.5" data-code="${v.code}">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Copy Code</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            vouchersContainer.querySelectorAll('.copy-voucher-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const code = btn.getAttribute('data-code');
+                    navigator.clipboard.writeText(code);
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = `<i class="fa-solid fa-check"></i><span>Copied!</span>`;
+                    btn.classList.replace('bg-amber-800', 'bg-emerald-700');
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.replace('bg-emerald-700', 'bg-amber-800');
+                    }, 2000);
+                });
+            });
+        };
+
+        renderVouchers();
+
+        // ---------------------------------------------------------
+        // Address Management Logic
+        // ---------------------------------------------------------
+        const loadAddresses = async () => {
+            const container = document.getElementById('addresses-list-container');
+            if (!container) return;
+            const token = getToken();
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/addresses`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && data.addresses) {
+                    renderAddresses(data.addresses, container);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
+        const renderAddresses = (addresses, container) => {
+            if (addresses.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-8 px-4 rounded-3xl bg-brand-50 border border-dashed border-brand-200">
+                        <i class="fa-solid fa-location-crosshairs text-3xl text-brand-300 mb-3"></i>
+                        <p class="text-sm text-brand-700">No saved addresses found. Add one above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = addresses.map(addr => `
+                <div class="relative p-5 rounded-2xl border ${addr.is_default ? 'border-brand-500 bg-brand-50 shadow-md' : 'border-brand-200 bg-white shadow-sm hover:shadow-md transition'} flex flex-col h-full">
+                    ${addr.is_default ? '<span class="absolute top-0 right-0 bg-brand-800 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-xl uppercase tracking-wider">Default</span>' : ''}
+                    <div class="flex-grow">
+                        <h4 class="font-bold text-brand-900 mb-1">${addr.name}</h4>
+                        <p class="text-sm text-brand-700 leading-snug">${addr.address}</p>
+                        <p class="text-sm text-brand-700 leading-snug">${addr.city} - ${addr.pincode}</p>
+                        <p class="text-sm text-brand-800 mt-2 font-medium"><i class="fa-solid fa-phone mr-1 text-brand-500"></i> ${addr.mobile}</p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-brand-200/60 flex items-center justify-between gap-2">
+                        ${addr.is_default ? 
+                            '<span class="text-xs font-bold text-emerald-600 flex items-center gap-1"><i class="fa-solid fa-check-circle"></i> Default Delivery</span>' : 
+                            `<button class="set-default-btn text-xs font-bold text-brand-600 hover:text-brand-900 transition underline underline-offset-2" data-id="${addr.id}">Set as Default</button>`
+                        }
+                        <button class="delete-address-btn text-brand-400 hover:text-red-500 transition" data-id="${addr.id}" title="Delete Address"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+            `).join('');
+
+            // Attach event listeners for delete and set default
+            container.querySelectorAll('.delete-address-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    if (!confirm('Are you sure you want to delete this address?')) return;
+                    const id = e.currentTarget.getAttribute('data-id');
+                    try {
+                        await fetch(`${API_BASE}/api/auth/addresses/${id}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${getToken()}` }
+                        });
+                        loadAddresses();
+                    } catch(err) {}
+                });
+            });
+
+            container.querySelectorAll('.set-default-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    try {
+                        await fetch(`${API_BASE}/api/auth/addresses/${id}/default`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `Bearer ${getToken()}` }
+                        });
+                        loadAddresses();
+                    } catch(err) {}
+                });
+            });
+        };
+
+        const addAddressBtn = document.getElementById('add-new-address-btn');
+        const addAddressContainer = document.getElementById('add-address-form-container');
+        const cancelAddAddressBtn = document.getElementById('cancel-add-address-btn');
+        const newAddressForm = document.getElementById('new-address-form');
+
+        if (addAddressBtn) {
+            addAddressBtn.addEventListener('click', () => {
+                addAddressContainer.classList.remove('hidden');
+                addAddressBtn.classList.add('hidden');
+            });
+        }
+        if (cancelAddAddressBtn) {
+            cancelAddAddressBtn.addEventListener('click', () => {
+                addAddressContainer.classList.add('hidden');
+                addAddressBtn.classList.remove('hidden');
+                newAddressForm.reset();
+            });
+        }
+
+        if (newAddressForm) {
+            newAddressForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const payload = {
+                    name: document.getElementById('new-addr-name').value.trim(),
+                    mobile: document.getElementById('new-addr-mobile').value.trim(),
+                    address: document.getElementById('new-addr-address').value.trim(),
+                    city: document.getElementById('new-addr-city').value.trim(),
+                    pincode: document.getElementById('new-addr-pincode').value.trim()
+                };
+
+                const submitBtn = newAddressForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.textContent;
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Saving...';
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/addresses`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getToken()}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        newAddressForm.reset();
+                        addAddressContainer.classList.add('hidden');
+                        addAddressBtn.classList.remove('hidden');
+                        loadAddresses();
+                    } else {
+                        alert('Failed to save address.');
+                    }
+                } catch(err) {
+                    alert('Error saving address.');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            });
+        }
+
+        loadAddresses();
+
+        // Delete Account Logic
+        const deleteAccountBtn = document.getElementById('delete-account-btn');
+        if (deleteAccountBtn) {
+            deleteAccountBtn.addEventListener('click', async () => {
+                const confirmDelete = confirm("Are you sure you want to permanently delete your account? This action cannot be undone.");
+                if (!confirmDelete) return;
+
+                const token = getToken();
+                if (!token) return;
+
+                deleteAccountBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Deleting...';
+                deleteAccountBtn.disabled = true;
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/account/delete`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.error || 'Failed to delete account');
+                    }
+
+                    // Success: clear session and redirect
+                    sessionStorage.removeItem('bookAuth');
+                    localStorage.removeItem('bookAuthToken');
+                    alert("Your account has been deleted successfully.");
+                    window.location.href = 'index.html';
+                } catch (err) {
+                    console.error('[Delete Account Error]:', err);
+                    alert(err.message || 'An error occurred while deleting your account.');
+                    deleteAccountBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i> <span>Delete Account</span>';
+                    deleteAccountBtn.disabled = false;
+                }
+            });
+        }
+
+        // Logout Logic
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('bookAuth');
+                localStorage.removeItem('bookAuthToken');
+                window.location.href = 'index.html';
+            });
+        }
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Jagirdar Publications</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs for Google Login -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['"Noto Serif Devanagari"', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            800: '#9a3412',
+                            900: '#7c2d12',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-brand-50 font-sans text-gray-800 antialiased selection:bg-brand-200 selection:text-brand-900 min-h-screen flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
+
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl border border-brand-100 overflow-hidden">
+        <div class="bg-gradient-to-br from-brand-800 to-brand-900 px-6 py-10 text-center relative overflow-hidden">
+            <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+            <h1 class="font-serif text-3xl font-bold text-white relative z-10">Welcome Back</h1>
+            <p class="mt-2 text-brand-100 text-sm font-medium relative z-10">Login to your Jagirdar account</p>
+        </div>
+
+        <div class="px-6 py-8 sm:px-10">
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label for="identifier" class="mb-1 block text-sm font-semibold text-brand-900">Email or Mobile Number</label>
+                    <input id="identifier" name="identifier" type="text" placeholder="Email or Mobile" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label for="password" class="block text-sm font-semibold text-brand-900">Password</label>
+                        <a href="forgot-password.html" class="text-xs font-semibold text-brand-600 hover:text-brand-800">Forgot Password?</a>
+                    </div>
+                    <input id="password" name="password" type="password" placeholder="Enter your password" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
+                </div>
+
+                <button id="login-btn" type="submit" class="w-full rounded-xl bg-brand-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-900 shadow-md">
+                    Login
+                </button>
+            </form>
+
+            <div class="mt-6 flex items-center justify-center space-x-4">
+                <span class="h-px w-full bg-gray-200"></span>
+                <span class="text-xs font-semibold uppercase text-gray-500 tracking-wider">OR</span>
+                <span class="h-px w-full bg-gray-200"></span>
+            </div>
+
+            <button id="google-login-btn" type="button" class="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:border-gray-300">
+                <svg viewBox="0 0 24 24" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    <path d="M1 1h22v22H1z" fill="none"/>
+                </svg>
+                Login with Google
+            </button>
+
+            <p id="status-message" class="mt-5 text-center text-sm font-semibold text-brand-700"></p>
+            <div class="mt-6 border-t border-gray-100 pt-6 text-center">
+                <p class="text-sm text-gray-600">Don't have an account? <a href="signup.html" class="font-bold text-brand-700 hover:text-brand-900 transition underline underline-offset-2">Sign up here</a></p>
+                <a href="index.html" class="mt-3 block text-xs font-semibold text-gray-400 hover:text-gray-600">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Complete Signup Modal -->
+    <div id="google-signup-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl border border-slate-200">
+            <h3 class="font-bold text-base text-slate-900 text-center">Complete Your Profile</h3>
+            <p class="text-xs text-slate-500 font-medium text-center mb-4">Please set a password and provide your mobile number to complete your Google Signup.</p>
+            
+            <form id="google-complete-form" class="space-y-4">
+                <input type="hidden" id="g-email">
+                <input type="hidden" id="g-name">
+                <input type="hidden" id="g-uid">
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Mobile Number</label>
+                    <input type="tel" id="g-mobile" required pattern="[0-9]{10}" placeholder="10-digit mobile number"
+                        class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Set Password</label>
+                    <input type="password" id="g-password" required minlength="6" placeholder="Min 6 characters"
+                        class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Confirm Password</label>
+                    <input type="password" id="g-confirm-password" required minlength="6" placeholder="Re-enter password"
+                        class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800">
+                </div>
+                
+                <div id="g-otp-section" class="hidden">
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Enter OTP Sent to Mobile</label>
+                    <input type="text" id="g-otp" pattern="[0-9]{6}" placeholder="6-digit OTP"
+                        class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800 tracking-widest text-center font-bold">
+                </div>
+
+                <p id="g-modal-msg" class="text-xs text-center font-semibold mt-1 text-red-600"></p>
+                
+                <div class="flex gap-3 pt-2">
+                    <button type="button" id="close-g-modal-btn"
+                        class="flex-1 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700">Cancel</button>
+                    <button type="submit" id="save-g-modal-btn"
+                        class="flex-1 py-2 rounded-xl bg-brand-800 hover:bg-brand-900 text-white text-xs font-bold transition">Send OTP</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCTYHfr_fl6qqvbvvh3o48Cn-vXgfkA4TA",
+            authDomain: "jagidar-publication.firebaseapp.com",
+            projectId: "jagidar-publication",
+            storageBucket: "jagidar-publication.firebasestorage.app",
+            messagingSenderId: "602959526619",
+            appId: "1:602959526619:web:ba370974d756be81d26afe",
+            measurementId: "G-13J5JYQF4P"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+        const form = document.getElementById('login-form');
+        const identifierInput = document.getElementById('identifier');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('login-btn');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const statusMessage = document.getElementById('status-message');
+
+        const API_BASE = 'https://jagirdar.vercel.app/api/auth';
+
+        const showStatus = (message, type = 'info') => {
+            statusMessage.textContent = message;
+            statusMessage.className = `mt-5 text-center text-sm font-semibold ${
+                type === 'error' ? 'text-red-600' : type === 'success' ? 'text-emerald-600' : 'text-brand-700'
+            }`;
+        };
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const identifier = identifierInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!identifier || !password) {
+                showStatus('Please enter both Email/Mobile and Password.', 'error');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+
+            try {
+                const res = await fetch(`${API_BASE}/login-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ identifier, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'Login failed.');
+                }
+
+                const params = new URLSearchParams(window.location.search);
+                const redirect = params.get('redirect') || 'index.html';
+
+                sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                if (data.token) {
+                    localStorage.setItem('bookAuthToken', data.token);
+                }
+
+                showStatus('🎉 Login Successful!', 'success');
+                setTimeout(() => {
+                    window.location.href = redirect;
+                }, 800);
+
+            } catch (err) {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+                showStatus(err.message, 'error');
+            }
+        });
+
+        if (googleLoginBtn) {
+            googleLoginBtn.addEventListener('click', async () => {
+                googleLoginBtn.disabled = true;
+                showStatus('Opening Google Login...');
+
+                try {
+                    const result = await auth.signInWithPopup(googleProvider);
+                    const user = result.user;
+                    showStatus('Authenticating with server...', 'info');
+
+                    const res = await fetch(`${API_BASE}/google-login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: user.email, name: user.displayName, firebaseUid: user.uid })
+                    });
+                    const data = await res.json();
+                    
+                    if (res.ok && data.success && data.isNewUser) {
+                        // Show complete signup modal
+                        document.getElementById('g-email').value = data.email;
+                        document.getElementById('g-name').value = data.name;
+                        document.getElementById('g-uid').value = data.firebaseUid;
+                        document.getElementById('google-signup-modal').classList.remove('hidden');
+                        showStatus('');
+                        return; // Stop here and wait for modal submission
+                    }
+                    
+                    if (!res.ok || !data.success) throw new Error(data.error || 'Server login failed.');
+
+                    const params = new URLSearchParams(window.location.search);
+                    const redirect = params.get('redirect') || 'index.html';
+                    sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    if (data.token) localStorage.setItem('bookAuthToken', data.token);
+
+                    showStatus('✅ Login Successful!', 'success');
+                    setTimeout(() => { window.location.href = redirect; }, 800);
+                } catch (err) {
+                    googleLoginBtn.disabled = false;
+                    console.error(err);
+                    if (err.code === 'auth/popup-blocked') {
+                        showStatus('Popup blocked! Please allow popups for this site.', 'error');
+                    } else if (err.code === 'auth/popup-closed-by-user') {
+                        showStatus('Google login was cancelled.', 'error');
+                    } else {
+                        showStatus(err.message || 'Google Login failed.', 'error');
+                    }
+                }
+            });
+        }
+
+        // Complete Google Signup Modal Logic
+        let gOtpSent = false;
+        const gModal = document.getElementById('google-signup-modal');
+        document.getElementById('close-g-modal-btn').addEventListener('click', () => {
+            gModal.classList.add('hidden');
+            googleLoginBtn.disabled = false;
+            gOtpSent = false;
+            document.getElementById('g-otp-section').classList.add('hidden');
+            document.getElementById('save-g-modal-btn').innerHTML = 'Send OTP';
+            document.getElementById('g-mobile').disabled = false;
+            document.getElementById('g-password').disabled = false;
+            document.getElementById('g-confirm-password').disabled = false;
+        });
+
+        document.getElementById('google-complete-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-g-modal-btn');
+            const msgEl = document.getElementById('g-modal-msg');
+            
+            const email = document.getElementById('g-email').value;
+            const name = document.getElementById('g-name').value;
+            const mobile = document.getElementById('g-mobile').value;
+            const password = document.getElementById('g-password').value;
+            const confirmPassword = document.getElementById('g-confirm-password').value;
+            const otp = document.getElementById('g-otp').value;
+
+            if (password !== confirmPassword) {
+                msgEl.textContent = 'Passwords do not match!';
+                return;
+            }
+            msgEl.textContent = '';
+            
+            if (!gOtpSent) {
+                // Send OTP Flow
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch(`${API_BASE}/send-signup-otp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mobile, email })
+                    });
+                    const data = await res.json();
+                    
+                    if (!res.ok || !data.success) throw new Error(data.error || 'Failed to send OTP.');
+
+                    gOtpSent = true;
+                    document.getElementById('g-otp-section').classList.remove('hidden');
+                    document.getElementById('g-otp').required = true;
+                    
+                    document.getElementById('g-mobile').disabled = true;
+                    document.getElementById('g-password').disabled = true;
+                    document.getElementById('g-confirm-password').disabled = true;
+
+                    btn.innerHTML = 'Verify & Complete';
+                    btn.disabled = false;
+                    msgEl.className = 'text-xs text-center font-semibold mt-1 text-emerald-600';
+                    msgEl.textContent = 'OTP sent to mobile!';
+                } catch (err) {
+                    console.error(err);
+                    msgEl.className = 'text-xs text-center font-semibold mt-1 text-red-600';
+                    msgEl.textContent = err.message || 'Error sending OTP.';
+                    btn.innerHTML = 'Send OTP';
+                    btn.disabled = false;
+                }
+            } else {
+                // Verify OTP & Complete Signup Flow
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verifying...';
+                btn.disabled = true;
+                msgEl.textContent = '';
+                msgEl.className = 'text-xs text-center font-semibold mt-1 text-red-600';
+
+                try {
+                    const res = await fetch(`${API_BASE}/google-signup-complete`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, name, mobile, password, otp })
+                    });
+                    const data = await res.json();
+                    
+                    if (!res.ok || !data.success) throw new Error(data.error || 'Failed to complete signup.');
+
+                    const params = new URLSearchParams(window.location.search);
+                    const redirect = params.get('redirect') || 'index.html';
+                    sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    if (data.token) localStorage.setItem('bookAuthToken', data.token);
+
+                    gModal.innerHTML = '<div class="p-6 text-center"><p class="text-emerald-600 font-bold mb-2">✅ Signup Complete!</p><p class="text-xs text-slate-500">Redirecting...</p></div>';
+                    setTimeout(() => { window.location.href = redirect; }, 800);
+                } catch (err) {
+                    console.error(err);
+                    msgEl.textContent = err.message || 'Error occurred during signup.';
+                    btn.innerHTML = 'Verify & Complete';
+                    btn.disabled = false;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+

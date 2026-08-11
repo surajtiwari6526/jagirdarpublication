@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address - Jagirdar Publications</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Noto Serif Devanagari', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fcf9f2', 100: '#f7f1e1', 200: '#eedfc0', 300: '#e3c696',
+                            400: '#d5a967', 500: '#c9a227', 600: '#b17b2f', 700: '#935d29',
+                            800: '#7A1F1F', 900: '#3B2A1D',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-brand-50 text-brand-900 font-sans">
+    <div class="min-h-screen flex items-center justify-center px-4 py-10">
+        <div class="w-full max-w-2xl rounded-3xl border border-brand-200 bg-white shadow-2xl p-8">
+            <h1 class="text-3xl font-serif font-bold text-brand-900">Delivery Address</h1>
+            <p class="mt-2 text-sm text-brand-700 mb-8">Please select or enter the shipping address for your order.</p>
+
+            <div id="saved-address-container" class="hidden"></div>
+
+            <form id="address-form" class="space-y-5">
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-brand-800">Full Name</label>
+                    <input id="name" type="text" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-brand-800">Phone Number</label>
+                    <input id="phone" type="tel" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-brand-800">Address</label>
+                    <textarea id="address" rows="3" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"></textarea>
+                </div>
+                <div class="grid md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-brand-800">City</label>
+                        <input id="city" type="text" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-brand-800">PIN Code</label>
+                        <input id="pincode" type="text" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3 pt-4">
+                    <button type="submit" class="rounded-2xl bg-brand-800 px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-900">Save & Continue</button>
+                    <a href="order.html" class="rounded-2xl border border-brand-300 px-6 py-3 text-base font-semibold text-brand-800 transition hover:bg-brand-50">Back</a>
+                </div>
+            </form>
+
+            <p id="address-message" class="mt-5 text-sm text-brand-700"></p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('address-form');
+        const message = document.getElementById('address-message');
+        const savedAddressContainer = document.getElementById('saved-address-container');
+
+        const getAuth = () => {
+            try { return JSON.parse(sessionStorage.getItem('bookAuth') || 'null'); } 
+            catch (e) { return null; }
+        };
+
+        const auth = getAuth();
+        if (!auth) {
+            window.location.href = 'login.html?redirect=order.html';
+        }
+        
+        // Populate existing name and phone
+        document.getElementById('name').value = auth.name || '';
+        document.getElementById('phone').value = auth.mobile || '';
+
+        const token = localStorage.getItem('bookAuthToken');
+
+        const API_BASE = 'https://jagirdar.vercel.app';
+
+        const loadSavedAddresses = async () => {
+            let addresses = [];
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/addresses`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success && data.addresses) {
+                        addresses = data.addresses;
+                    }
+                } catch(err) {
+                    console.error(err);
+                }
+            }
+
+            // Fallback for legacy users
+            if (addresses.length === 0 && auth.address && auth.city && auth.pincode) {
+                addresses.push({
+                    id: 'legacy',
+                    name: auth.name,
+                    mobile: auth.mobile,
+                    address: auth.address,
+                    city: auth.city,
+                    pincode: auth.pincode,
+                    is_default: 1
+                });
+            }
+
+            if (addresses.length > 0) {
+                savedAddressContainer.classList.remove('hidden');
+                
+                let html = '<div class="mb-8 space-y-4">';
+                addresses.forEach(addr => {
+                    html += `
+                        <div class="p-5 rounded-2xl bg-brand-50 border ${addr.is_default ? 'border-brand-500 shadow-md' : 'border-brand-200'} relative">
+                            ${addr.is_default ? '<span class="absolute top-0 right-0 bg-brand-800 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl uppercase tracking-wider">Default</span>' : ''}
+                            <h3 class="text-brand-900 font-bold mb-1">${addr.name}</h3>
+                            <p class="text-brand-800 text-sm mb-1">${addr.address}</p>
+                            <p class="text-brand-800 text-sm mb-1">${addr.city} - ${addr.pincode}</p>
+                            <p class="text-brand-800 text-sm mb-4 font-medium"><i class="fa-solid fa-phone mr-1 text-brand-500"></i> ${addr.mobile}</p>
+                            <button class="deliver-saved-btn w-full rounded-xl bg-green-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 shadow" data-addr='${JSON.stringify({name: addr.name, phone: addr.mobile, address: addr.address, city: addr.city, pincode: addr.pincode}).replace(/'/g, "&apos;")}'>
+                                Deliver to this address
+                            </button>
+                        </div>
+                    `;
+                });
+                html += `
+                    </div>
+                    <div class="flex items-center space-x-4 mb-8">
+                        <div class="h-px w-full bg-brand-200"></div>
+                        <div class="text-sm font-semibold text-brand-600 whitespace-nowrap uppercase tracking-wider">Or Add New Address</div>
+                        <div class="h-px w-full bg-brand-200"></div>
+                    </div>
+                `;
+                savedAddressContainer.innerHTML = html;
+
+                document.querySelectorAll('.deliver-saved-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const addressData = JSON.parse(e.currentTarget.getAttribute('data-addr'));
+                        sessionStorage.setItem('bookAddress', JSON.stringify(addressData));
+                        window.location.href = 'summary.html';
+                    });
+                });
+            }
+        };
+
+        loadSavedAddresses();
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+            
+            const addressData = {
+                name: document.getElementById('name').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                address: document.getElementById('address').value.trim(),
+                city: document.getElementById('city').value.trim(),
+                pincode: document.getElementById('pincode').value.trim()
+            };
+            
+            // Save Address to Backend
+            if (token) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/addresses`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            name: addressData.name,
+                            mobile: addressData.phone,
+                            address: addressData.address,
+                            city: addressData.city,
+                            pincode: addressData.pincode
+                        })
+                    });
+                    
+                    // Fire and forget legacy profile update for backward compatibility just in case
+                    fetch(`${API_BASE}/api/auth/profile`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ ...auth, ...addressData, mobile: addressData.phone })
+                    });
+                } catch(err) {
+                    console.error("Failed to add address", err);
+                }
+            }
+            
+            sessionStorage.setItem('bookAddress', JSON.stringify(addressData));
+            message.textContent = `Thank you ${addressData.name}! Redirecting...`;
+            message.className = 'mt-5 text-sm text-green-600 font-semibold text-center';
+            
+            setTimeout(() => {
+                window.location.href = 'summary.html';
+            }, 600);
+        });
+    </script>
+</body>
+</html>
+
+
+

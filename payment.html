@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment - Jagirdar Publications</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Noto Serif Devanagari', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fcf9f2', 100: '#f7f1e1', 200: '#eedfc0', 300: '#e3c696',
+                            400: '#d5a967', 500: '#c9a227', 600: '#b17b2f', 700: '#935d29',
+                            800: '#7A1F1F', 900: '#3B2A1D',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen bg-brand-50 text-brand-900 font-sans">
+    <div class="min-h-screen flex items-center justify-center px-4 py-10">
+        <div class="w-full max-w-3xl rounded-3xl border border-brand-200 bg-white shadow-2xl p-8">
+            <h1 class="text-3xl font-serif font-bold text-brand-900">Payment Method</h1>
+            <p class="mt-2 text-sm text-brand-700">Choose your preferred payment method and complete the checkout.</p>
+
+            <div class="mt-8 space-y-4">
+                <label class="flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50 p-4 cursor-pointer hover:border-brand-300 transition">
+                    <div class="flex items-center gap-3">
+                        <input type="radio" name="payment" value="card" checked class="h-4 w-4 text-brand-800 focus:ring-brand-500">
+                        <span class="font-semibold text-brand-900">Credit / Debit Card</span>
+                    </div>
+                    <span class="text-sm text-brand-700 font-medium">Visa, MasterCard, RuPay</span>
+                </label>
+
+                <label class="flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50 p-4 cursor-pointer hover:border-brand-300 transition">
+                    <div class="flex items-center gap-3">
+                        <input type="radio" name="payment" value="upi" class="h-4 w-4 text-brand-800 focus:ring-brand-500">
+                        <span class="font-semibold text-brand-900">UPI</span>
+                    </div>
+                    <span class="text-sm text-brand-700 font-medium">GPay, PhonePe, Paytm, etc.</span>
+                </label>
+
+                <label class="flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50 p-4 cursor-pointer hover:border-brand-300 transition">
+                    <div class="flex items-center gap-3">
+                        <input type="radio" name="payment" value="netbanking" class="h-4 w-4 text-brand-800 focus:ring-brand-500">
+                        <span class="font-semibold text-brand-900">NetBanking</span>
+                    </div>
+                    <span class="text-sm text-brand-700 font-medium">All Indian Banks</span>
+                </label>
+
+                <label class="flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50 p-4 cursor-pointer hover:border-brand-300 transition">
+                    <div class="flex items-center gap-3">
+                        <input type="radio" name="payment" value="wallet" class="h-4 w-4 text-brand-800 focus:ring-brand-500">
+                        <span class="font-semibold text-brand-900">Wallets</span>
+                    </div>
+                    <span class="text-sm text-brand-700 font-medium">Mobikwik, Freecharge, etc.</span>
+                </label>
+            </div>
+
+            <div id="payment-status-msg" class="mt-6 text-center font-bold text-emerald-700 hidden"></div>
+
+            <div class="mt-8 flex flex-wrap gap-3">
+                <a href="summary.html" class="rounded-2xl border border-brand-300 px-6 py-3 text-base font-semibold text-brand-800 transition hover:bg-brand-50">Back</a>
+                <button type="button" id="pay-now-btn" class="rounded-2xl bg-brand-800 px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-900 flex items-center gap-2">
+                    <span>Confirm Order</span>
+                    <i class="fa-solid fa-lock"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const payNowBtn = document.getElementById('pay-now-btn');
+        const paymentStatusMsg = document.getElementById('payment-status-msg');
+
+        payNowBtn.addEventListener('click', async () => {
+            const selectedMethod = document.querySelector('input[name="payment"]:checked');
+            if (!selectedMethod) {
+                alert('Please select a payment method.');
+                return;
+            }
+
+            let methodLabel = selectedMethod.value === 'card' ? 'Credit/Debit Card' : 'UPI Payment';
+            if (selectedMethod.value === 'upi') {
+                const selectedUpiApp = document.querySelector('input[name="upi-app"]:checked');
+                if (selectedUpiApp) {
+                    const appNames = { gpay: 'Google Pay', phonepe: 'PhonePe', paytm: 'Paytm' };
+                    methodLabel = `UPI (${appNames[selectedUpiApp.value] || 'UPI'})`;
+                }
+            }
+
+            const token = localStorage.getItem('token') || '';
+
+            const quantity = parseInt(sessionStorage.getItem('bookQuantity') || '1', 10);
+            const voucherCode = sessionStorage.getItem('bookAppliedVoucher') || '';
+            const shippingName = sessionStorage.getItem('shippingName') || '';
+            const shippingMobile = sessionStorage.getItem('shippingMobile') || '';
+            const shippingAddress = sessionStorage.getItem('shippingAddress') || '';
+            const shippingCity = sessionStorage.getItem('shippingCity') || '';
+            const shippingPincode = sessionStorage.getItem('shippingPincode') || '';
+
+            payNowBtn.disabled = true;
+            payNowBtn.textContent = 'Processing...';
+
+            try {
+                // 1. Create Draft Order
+                const orderRes = await fetch('https://jagirdar.vercel.app/api/orders/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        quantity,
+                        shippingName,
+                        shippingMobile,
+                        shippingAddress,
+                        shippingCity,
+                        shippingPincode,
+                        voucherCode,
+                        paymentMethod: methodLabel
+                    })
+                });
+                const orderData = await orderRes.json();
+                
+                if (!orderData.success) throw new Error(orderData.error || 'Failed to create order');
+
+
+
+                // 2. Create Razorpay Order
+                const rzpRes = await fetch('https://jagirdar.vercel.app/api/payment/razorpay/create-order', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ orderId: orderData.order.id })
+                });
+                const rzpData = await rzpRes.json();
+
+                if (!rzpData.success) throw new Error(rzpData.error || 'Failed to initialize payment');
+
+                // 3. Open Razorpay Checkout
+                const options = {
+                    key: rzpData.key,
+                    amount: rzpData.amount,
+                    currency: rzpData.currency,
+                    name: 'Jagirdar Publications',
+                    description: 'Book Purchase',
+                    order_id: rzpData.razorpayOrderId,
+                    handler: async function (response) {
+                        try {
+                            paymentStatusMsg.classList.remove('hidden');
+                            paymentStatusMsg.textContent = 'Verifying payment...';
+
+                            // 4. Verify Payment
+                            const verifyRes = await fetch('https://jagirdar.vercel.app/api/payment/razorpay/verify', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({
+                                    orderId: rzpData.orderId,
+                                    razorpayOrderId: response.razorpay_order_id,
+                                    razorpayPaymentId: response.razorpay_payment_id,
+                                    razorpaySignature: response.razorpay_signature
+                                })
+                            });
+                            
+                            const verifyData = await verifyRes.json();
+                            if (verifyData.success) {
+                                paymentStatusMsg.textContent = '🎉 Payment Successful! Redirecting...';
+                                sessionStorage.removeItem('bookQuantity');
+                                sessionStorage.removeItem('bookAppliedVoucher');
+                                sessionStorage.removeItem('bookDiscount');
+                                sessionStorage.removeItem('bookFinalTotal');
+                                setTimeout(() => window.location.href = `order-confirm.html?orderId=${rzpData.orderId}&amount=${rzpData.amount / 100}&method=${encodeURIComponent(methodLabel)}&paymentId=${response.razorpay_payment_id}`, 1500);
+                            } else {
+                                throw new Error(verifyData.error || 'Payment verification failed');
+                            }
+                        } catch (err) {
+                            alert(err.message);
+                            payNowBtn.disabled = false;
+                            payNowBtn.textContent = 'Pay Now';
+                        }
+                    },
+                    prefill: {
+                        name: rzpData.customerName,
+                        contact: rzpData.customerMobile
+                    },
+                    theme: {
+                        color: '#7A1F1F'
+                    }
+                };
+                
+                const rzp = new Razorpay(options);
+                rzp.on('payment.failed', function (response) {
+                    alert('Payment Failed: ' + response.error.description);
+                    payNowBtn.disabled = false;
+                    payNowBtn.textContent = 'Pay Now';
+                });
+                rzp.open();
+
+            } catch (err) {
+                alert(err.message);
+                payNowBtn.disabled = false;
+                payNowBtn.textContent = 'Pay Now';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+

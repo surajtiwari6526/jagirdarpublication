@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Jagirdar Publications</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Noto Serif Devanagari', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fcf9f2', 100: '#f7f1e1', 200: '#eedfc0', 300: '#e3c696',
+                            400: '#d5a967', 500: '#c9a227', 600: '#b17b2f', 700: '#935d29',
+                            800: '#7A1F1F', 900: '#3B2A1D',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="min-h-screen bg-slate-100 text-brand-900 font-sans">
+
+    <!-- Admin Login Modal Overlay -->
+    <div id="login-modal"
+        class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl border border-slate-200">
+            <div class="text-center mb-6">
+                <div
+                    class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-800 text-white text-2xl font-bold">
+                    JP</div>
+                <h1 class="text-2xl font-serif font-bold text-slate-900">Admin Portal Login</h1>
+                <p class="text-xs text-slate-500 mt-1">Sign in with administrator credentials</p>
+            </div>
+            <form id="admin-login-form" class="space-y-5 p-8">
+                <div id="login-step-1">
+                    <div class="space-y-4 mb-6">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Admin Email</label>
+                            <input type="email" id="admin-email" placeholder="admin@example.com"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-sm outline-none focus:border-brand-800"
+                                required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Password</label>
+                            <input type="password" id="admin-password" placeholder="••••••••"
+                                class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-sm outline-none focus:border-brand-800"
+                                required>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="login-step-2" class="hidden">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Enter 6-Digit OTP</label>
+                    <input type="text" id="admin-otp" placeholder="123456" maxlength="6"
+                        class="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 text-sm outline-none text-center tracking-[0.5em] font-bold focus:border-brand-800">
+                    <p class="text-xs text-slate-500 text-center mt-2">Check your email for the verification code.</p>
+                </div>
+
+                <button type="submit" id="admin-submit-btn"
+                    class="w-full py-3.5 bg-brand-800 hover:bg-brand-900 text-white font-bold rounded-xl transition shadow-lg">Login
+                    to Admin Portal</button>
+                <p id="admin-login-msg" class="text-xs text-center font-semibold text-red-600"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create Admin Modal -->
+    <div id="create-admin-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden border border-slate-200">
+            <div class="bg-brand-900 p-6 text-center">
+                <i class="fa-solid fa-user-plus text-3xl text-brand-400 mb-3 block"></i>
+                <h2 class="text-xl font-bold text-white tracking-tight">Create New Admin</h2>
+                <p class="text-xs text-brand-200 mt-1">Only authorized admins can do this.</p>
+            </div>
+            <form id="create-admin-form" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
+                    <input type="text" id="new-admin-name" required
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                    <input type="email" id="new-admin-email" required
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number (Optional)</label>
+                    <input type="tel" id="new-admin-mobile" placeholder="e.g. 9876543210"
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Secure Password</label>
+                    <input type="password" id="new-admin-password" required
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-sm">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" id="close-create-admin-btn"
+                        class="w-1/2 py-2.5 rounded-xl font-bold text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 transition">Cancel</button>
+                    <button type="submit"
+                        class="w-1/2 py-2.5 rounded-xl font-bold text-sm bg-brand-800 hover:bg-brand-900 text-white shadow-lg shadow-brand-500/30 transition">Create</button>
+                </div>
+                <p id="create-admin-msg" class="text-xs text-center font-semibold mt-2"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Admin Dashboard UI -->
+    <div id="admin-dashboard" class="hidden min-h-screen flex flex-col">
+        <!-- Top Bar -->
+        <header class="bg-brand-900 text-white sticky top-0 z-30 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <span class="font-serif font-bold text-xl tracking-wide text-brand-400">Jagirdar Admin</span>
+                    <span
+                        class="text-xs bg-brand-800 text-brand-200 px-2.5 py-0.5 rounded-full border border-brand-700 font-semibold">Production
+                        v1.0</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="admin-user-display" class="text-xs font-semibold text-brand-200">Mukesh Raj (Admin)</span>
+                    <button id="admin-create-admin-btn"
+                        class="hidden px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs font-bold transition items-center gap-1.5 ml-2 border border-slate-600">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span class="hidden sm:inline">Add Admin</span>
+                    </button>
+                    <button id="admin-logout-btn"
+                        class="px-3.5 py-1.5 rounded-xl bg-brand-800 hover:bg-brand-700 text-xs font-bold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+            <!-- Navigation Tabs -->
+            <div class="flex flex-wrap gap-2 mb-8 border-b border-slate-200 pb-3">
+                <button
+                    class="adm-tab active px-5 py-2.5 rounded-xl font-bold text-sm bg-brand-800 text-white shadow-sm transition"
+                    data-target="panel-overview">
+                    <i class="fa-solid fa-chart-line mr-2"></i>Dashboard Overview
+                </button>
+                <button
+                    class="adm-tab px-5 py-2.5 rounded-xl font-bold text-sm bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition"
+                    data-target="panel-orders">
+                    <i class="fa-solid fa-boxes-packing mr-2"></i>Orders Management
+                </button>
+                <button
+                    class="adm-tab px-5 py-2.5 rounded-xl font-bold text-sm bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition"
+                    data-target="panel-users">
+                    <i class="fa-solid fa-users-gear mr-2"></i>Users Management
+                </button>
+                <button
+                    class="adm-tab px-5 py-2.5 rounded-xl font-bold text-sm bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition"
+                    data-target="panel-vouchers">
+                    <i class="fa-solid fa-ticket mr-2"></i>Voucher Engine
+                </button>
+                <button
+                    id="tab-manage-admins"
+                    class="hidden adm-tab px-5 py-2.5 rounded-xl font-bold text-sm bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition"
+                    data-target="panel-admins">
+                    <i class="fa-solid fa-user-shield mr-2"></i>Manage Admins
+                </button>
+            </div>
+
+            <!-- Panel 1: Overview & Analytics Stats -->
+            <div id="panel-overview" class="adm-panel space-y-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</p>
+                        <h3 id="stat-revenue" class="text-3xl font-bold text-brand-800 mt-2">₹0</h3>
+                        <p class="text-xs text-emerald-600 mt-1 font-semibold"><i class="fa-solid fa-circle-check"></i>
+                            Verified Completed Payments</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Orders</p>
+                        <h3 id="stat-orders" class="text-3xl font-bold text-slate-900 mt-2">0</h3>
+                        <p class="text-xs text-slate-500 mt-1">All time customer orders</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Books Sold</p>
+                        <h3 id="stat-books" class="text-3xl font-bold text-amber-600 mt-2">0</h3>
+                        <p class="text-xs text-slate-500 mt-1">Hardcover copies fulfilled</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">Registered Users</p>
+                        <h3 id="stat-users" class="text-3xl font-bold text-purple-600 mt-2">0</h3>
+                        <p class="text-xs text-purple-600 mt-1 font-semibold">Active accounts</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-slate-900 mb-4">Admin Capabilities Summary</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <span class="font-bold text-slate-800 block mb-1">1. Advanced Order Search & Shipping</span>
+                            <p class="text-xs text-slate-500">
+                            Filter orders by Order ID, Name, Mobile, Date Range, or Status. Click the <strong>Ship Now Button</strong> to instantly mark orders as shipped (`IN_TRANSIT`) with the Order ID.
+                            </p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <span class="font-bold text-slate-800 block mb-1">2. User Block / Unblock Management</span>
+                            View all registered customer accounts and toggle Block/Unblock. Blocked users cannot request
+                            OTP or log into the platform.
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <span class="font-bold text-slate-800 block mb-1">3. Live Customer Account Sync</span>
+                            Status updates (e.g. Shipped tickmarks, order IDs, or vouchers) sync to user accounts
+                            in real-time.
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Online Orders Toggle -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-1">Online Orders & Payments</h3>
+                        <p class="text-xs text-slate-500">Enable or disable website orders. When disabled, the order page is hidden and users can only order via WhatsApp.</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span id="order-status-text" class="text-xs font-bold text-red-600 uppercase tracking-wider">Disabled</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-online-orders" class="sr-only peer">
+                            <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Orders Management Table & Search Engine -->
+            <div id="panel-orders" class="adm-panel hidden space-y-6">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Customer Orders Management</h2>
+                            <p class="text-xs text-slate-500">Filter by date, search customer info, or click the Ship Now button to ship with Order ID.</p>
+                        </div>
+                        <button id="refresh-orders-btn"
+                            class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 transition">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Refresh Data
+                        </button>
+                    </div>
+
+                    <!-- Search & Date Filter Bar -->
+                    <div
+                        class="bg-slate-50 p-4 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Search (Order ID, Name, Phone)</label>
+                            <div class="relative">
+                                <input type="text" id="order-search-input" placeholder="e.g. JP-84920 or 99044..."
+                                    class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-800">
+                                <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400"></i>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">From Date</label>
+                            <input type="date" id="order-start-date"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-800">
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">To Date</label>
+                            <input type="date" id="order-end-date"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-800">
+                        </div>
+
+                        <div>
+                            <label class="block font-bold text-slate-700 mb-1">Order Status</label>
+                            <select id="order-status-filter"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-800">
+                                <option value="ALL">All Statuses</option>
+                                <option value="PENDING">PENDING</option>
+                                <option value="PAID">PAID</option>
+                                <option value="PROCESSING">PROCESSING</option>
+                                <option value="IN_TRANSIT">IN_TRANSIT (Shipped)</option>
+                                <option value="DELIVERED">DELIVERED</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-end gap-2">
+                            <button id="apply-filters-btn"
+                                class="flex-1 py-2 bg-brand-800 hover:bg-brand-900 text-white font-bold rounded-xl transition">Apply
+                                Filters</button>
+                            <button id="reset-filters-btn"
+                                class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">Reset</button>
+                            <button id="export-excel-btn"
+                                class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition flex items-center justify-center gap-1" title="Download Excel">
+                                <i class="fa-solid fa-file-excel"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Orders Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">Order ID</th>
+                                    <th class="p-3">Tracking ID</th>
+                                    <th class="p-3">Date</th>
+                                    <th class="p-3">Customer & Delivery Details</th>
+                                    <th class="p-3">Qty</th>
+                                    <th class="p-3">Total Amount</th>
+                                    <th class="p-3">Method</th>
+                                    <th class="p-3">Payment ID</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3">Edit Status</th>
+                                    <th class="p-3">View Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-orders-table-body" class="divide-y divide-slate-100">
+                                <!-- Order rows injected dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 3: Users Management Tab -->
+            <div id="panel-users" class="adm-panel hidden space-y-6">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Registered Users Management</h2>
+                            <p class="text-xs text-slate-500">View customer account details, orders count, and
+                                Block/Unblock permissions</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="refresh-users-btn"
+                                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 transition flex items-center">
+                                <i class="fa-solid fa-rotate-right mr-1"></i> Refresh Users
+                            </button>
+                            <button id="export-users-btn"
+                                class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-xl text-xs font-bold text-white transition flex items-center">
+                                <i class="fa-solid fa-file-excel mr-1"></i> Download Users Data
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">User ID</th>
+                                    <th class="p-3">Customer Name</th>
+                                    <th class="p-3">Mobile Number</th>
+                                    <th class="p-3">Email Address</th>
+                                    <th class="p-3">Total Orders</th>
+                                    <th class="p-3">Total Spent</th>
+                                    <th class="p-3">Account Status</th>
+                                    <th class="p-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-users-table-body" class="divide-y divide-slate-100">
+                                <!-- User rows injected dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 4: Voucher Engine -->
+            <div id="panel-vouchers" class="adm-panel hidden space-y-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Form Create Voucher -->
+                    <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                        <h2 class="text-lg font-bold text-slate-900 mb-4">Create New Voucher</h2>
+                        <form id="create-voucher-form" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Voucher Code</label>
+                                <input type="text" id="v-code" placeholder="e.g. FESTIVE100"
+                                    class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs uppercase outline-none focus:border-brand-800"
+                                    required>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Type</label>
+                                    <select id="v-type"
+                                        class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800">
+                                        <option value="FLAT">Flat ₹ Discount</option>
+                                        <option value="PERCENT">Percentage % Discount</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 mb-1">Discount Value</label>
+                                    <input type="number" id="v-value" placeholder="100"
+                                        class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800"
+                                        required>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Min Order Amount (₹)</label>
+                                <input type="number" id="v-min" value="0"
+                                    class="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800">
+                            </div>
+                            <!-- Target Audience Selector -->
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-1">🎯 Target Audience
+                                    Segment</label>
+                                <select id="v-target-mode"
+                                    class="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold outline-none focus:border-brand-800">
+                                    <option value="ALL">🌐 All Customers (Public Voucher)</option>
+                                    <option value="SPECIFIC_USER">👤 Single Specific User</option>
+                                    <option value="DATE_RANGE">📅 New Users Registered Between Date Range</option>
+                                    <option value="LAST_DAYS">⏱️ New Users Registered in Last X Days</option>
+                                    <option value="MIN_ORDERS">⭐ VIP Customers (≥ X Orders Placed)</option>
+                                    <option value="ZERO_ORDERS">💤 Inactive Users (0 Orders Placed)</option>
+                                    <option value="MIN_SPENT">💰 High Spenders (Total Spent ≥ ₹X)</option>
+                                </select>
+                            </div>
+
+                            <!-- Dynamic Target Sub Inputs -->
+                            <div id="target-specific-user-box" class="target-sub-box hidden">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Select User</label>
+                                <select id="v-user-select"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs outline-none mb-1">
+                                    <option value="">-- Select Customer --</option>
+                                </select>
+                                <input type="tel" id="v-mobile" placeholder="Or enter mobile number"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs outline-none">
+                            </div>
+
+                            <div id="target-date-range-box" class="target-sub-box hidden space-y-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600">Reg. Start
+                                            Date</label>
+                                        <input type="date" id="v-start-date"
+                                            class="w-full px-2 py-1.5 rounded-lg border text-xs">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold text-slate-600">Reg. End Date</label>
+                                        <input type="date" id="v-end-date"
+                                            class="w-full px-2 py-1.5 rounded-lg border text-xs">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="target-last-days-box" class="target-sub-box hidden">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Registered in Last
+                                    (Days)</label>
+                                <input type="number" id="v-last-days" value="7"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs outline-none">
+                            </div>
+
+                            <div id="target-min-orders-box" class="target-sub-box hidden">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Minimum Orders Placed</label>
+                                <input type="number" id="v-min-orders" value="1"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs outline-none">
+                            </div>
+
+                            <div id="target-min-spent-box" class="target-sub-box hidden">
+                                <label class="block text-xs font-bold text-slate-700 mb-1">Minimum Total Spent
+                                    (₹)</label>
+                                <input type="number" id="v-min-spent" value="500"
+                                    class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs outline-none">
+                            </div>
+
+                            <button type="submit"
+                                class="w-full py-3 bg-brand-800 hover:bg-brand-900 text-white font-bold text-xs rounded-xl transition shadow flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>Bulk Target & Create Vouchers</span>
+                            </button>
+                            <p id="v-msg" class="text-xs text-center font-semibold"></p>
+                        </form>
+                    </div>
+
+                    <!-- Vouchers Table -->
+                    <div
+                        class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                        <h2 class="text-lg font-bold text-slate-900 mb-4">Active Database Vouchers</h2>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th class="p-3">Code</th>
+                                        <th class="p-3">Discount</th>
+                                        <th class="p-3">Min Order</th>
+                                        <th class="p-3">Assigned User</th>
+                                        <th class="p-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vouchers-table-body" class="divide-y divide-slate-100">
+                                    <!-- Dynamic voucher rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel 5: Manage Admins (Super Admin Only) -->
+            <div id="panel-admins" class="adm-panel hidden space-y-6">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6">
+                    <h2 class="text-xl font-bold text-slate-900 mb-4">Admin Directory (Super Admin Only)</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3">ID / Created</th>
+                                    <th class="p-3">Name</th>
+                                    <th class="p-3">Email</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-management-body" class="divide-y divide-slate-100">
+                                <!-- Admin rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Change Admin Password Modal -->
+    <div id="change-pwd-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl border border-slate-200">
+            <h3 class="font-bold text-base text-slate-900">Change Admin Password</h3>
+            <p class="text-xs text-slate-500 font-semibold" id="pwd-modal-admin-name"></p>
+            <input type="hidden" id="pwd-modal-admin-id">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">New Secure Password</label>
+                <input type="password" id="modal-new-pwd-input" required minlength="6"
+                    class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none focus:border-brand-800">
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button id="close-pwd-modal-btn"
+                    class="flex-1 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700">Cancel</button>
+                <button id="save-pwd-modal-btn"
+                    class="flex-1 py-2 rounded-xl bg-brand-800 text-white text-xs font-bold shadow-md">Update Password</button>
+            </div>
+            <p id="pwd-modal-msg" class="text-xs text-center font-semibold mt-1"></p>
+        </div>
+    </div>
+
+    <!-- Status Update Modal -->
+    <div id="status-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl border border-slate-200">
+            <h3 class="font-bold text-base text-slate-900">Update Order Status</h3>
+            <div class="space-y-3">
+                <select id="modal-status-select"
+                    class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none">
+                    <option value="PAID">PAID (Payment Received)</option>
+                    <option value="PROCESSING">PROCESSING</option>
+                    <option value="IN_TRANSIT">IN TRANSIT (Shipped)</option>
+                    <option value="DELIVERED">DELIVERED</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                </select>
+                <input type="text" id="modal-tracking-input" placeholder="e.g. DELHIVERY-1234"
+                    class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button id="close-modal-btn"
+                    class="flex-1 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700">Cancel</button>
+                <button id="save-modal-btn"
+                    class="flex-1 py-2 rounded-xl bg-brand-800 text-white text-xs font-bold">Save Status</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Excel Modal -->
+    <div id="export-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl border border-slate-200">
+            <h3 class="font-bold text-base text-slate-900"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>Export to Excel</h3>
+            <p class="text-xs text-slate-500 font-medium">Select a date range to download the customer orders report.</p>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Start Date</label>
+                    <input type="date" id="export-start-date" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">End Date</label>
+                    <input type="date" id="export-end-date" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs outline-none">
+                </div>
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button id="close-export-modal-btn"
+                    class="flex-1 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700">Cancel</button>
+                <button id="download-excel-btn"
+                    class="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        const API = 'https://jagirdar.vercel.app/api/admin';
+        let adminToken = sessionStorage.getItem('adminToken') || '';
+        let currentSelectedOrderId = null;
+
+        const loginModal = document.getElementById('login-modal');
+        const adminDashboard = document.getElementById('admin-dashboard');
+        const loginForm = document.getElementById('admin-login-form');
+        const loginMsg = document.getElementById('admin-login-msg');
+
+        function decodeJWT(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                return JSON.parse(jsonPayload);
+            } catch(e) { return null; }
+        }
+
+        if (adminToken) {
+            const decoded = decodeJWT(adminToken);
+            if (decoded && decoded.email === 'mukeshd1008raj@gmail.com') {
+                document.getElementById('admin-create-admin-btn').classList.remove('hidden');
+                document.getElementById('admin-create-admin-btn').classList.add('flex');
+                document.getElementById('tab-manage-admins').classList.remove('hidden');
+                document.getElementById('tab-manage-admins').classList.add('inline-flex');
+            }
+            loginModal.classList.add('hidden');
+            adminDashboard.classList.remove('hidden');
+            loadAdminData();
+        }
+
+        let loginStep = 1;
+
+        // Login Submit
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            const btn = document.getElementById('admin-submit-btn');
+
+            try {
+                if (loginStep === 1) {
+                    btn.disabled = true;
+                    btn.textContent = 'Sending OTP...';
+                    
+                    const res = await fetch(`${API}/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                    const data = await res.json();
+                    
+                    btn.disabled = false;
+                    
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.error || 'Login failed');
+                    }
+
+                    if (data.requireOtp) {
+                        loginStep = 2;
+                        document.getElementById('login-step-1').classList.add('hidden');
+                        document.getElementById('login-step-2').classList.remove('hidden');
+                        btn.textContent = 'Verify OTP & Login';
+                        loginMsg.className = 'text-xs text-center font-semibold text-green-600';
+                        loginMsg.textContent = data.message;
+                    } else {
+                        adminToken = data.token;
+                        sessionStorage.setItem('adminToken', adminToken);
+                        
+                        if (data.admin.email === 'mukeshd1008raj@gmail.com') {
+                            document.getElementById('admin-create-admin-btn').classList.remove('hidden');
+                            document.getElementById('admin-create-admin-btn').classList.add('flex');
+                            document.getElementById('tab-manage-admins').classList.remove('hidden');
+                            document.getElementById('tab-manage-admins').classList.add('inline-flex');
+                        } else {
+                            document.getElementById('admin-create-admin-btn').classList.add('hidden');
+                            document.getElementById('admin-create-admin-btn').classList.remove('flex');
+                            document.getElementById('tab-manage-admins').classList.add('hidden');
+                            document.getElementById('tab-manage-admins').classList.remove('inline-flex');
+                        }
+                        
+                        loginModal.classList.add('hidden');
+                        adminDashboard.classList.remove('hidden');
+                        document.getElementById('admin-user-display').textContent = data.admin.name;
+                        loadAdminData();
+                    }
+                } else if (loginStep === 2) {
+                    const otp = document.getElementById('admin-otp').value.trim();
+                    if (!otp || otp.length !== 6) throw new Error("Please enter a valid 6-digit OTP.");
+                    
+                    btn.disabled = true;
+                    btn.textContent = 'Verifying...';
+                    
+                    const res = await fetch(`${API}/verify-login-otp`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, otp })
+                    });
+                    const data = await res.json();
+                    
+                    btn.disabled = false;
+                    
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.error || 'OTP Verification failed');
+                    }
+                    
+                    adminToken = data.token;
+                    sessionStorage.setItem('adminToken', adminToken);
+                    
+                    if (data.admin.email === 'mukeshd1008raj@gmail.com') {
+                        document.getElementById('admin-create-admin-btn').classList.remove('hidden');
+                        document.getElementById('admin-create-admin-btn').classList.add('flex');
+                        document.getElementById('tab-manage-admins').classList.remove('hidden');
+                        document.getElementById('tab-manage-admins').classList.add('inline-flex');
+                    } else {
+                        document.getElementById('admin-create-admin-btn').classList.add('hidden');
+                        document.getElementById('admin-create-admin-btn').classList.remove('flex');
+                        document.getElementById('tab-manage-admins').classList.add('hidden');
+                        document.getElementById('tab-manage-admins').classList.remove('inline-flex');
+                    }
+                    
+                    loginModal.classList.add('hidden');
+                    adminDashboard.classList.remove('hidden');
+                    document.getElementById('admin-user-display').textContent = data.admin.name;
+                    loadAdminData();
+                }
+            } catch (err) {
+                btn.disabled = false;
+                if (loginStep === 1) btn.textContent = 'Login to Admin Portal';
+                else btn.textContent = 'Verify OTP & Login';
+                loginMsg.className = 'text-xs text-center font-semibold text-red-600';
+                loginMsg.textContent = err.message;
+            }
+        });
+
+        // Logout
+        document.getElementById('admin-logout-btn').addEventListener('click', () => {
+            sessionStorage.removeItem('adminToken');
+            location.reload();
+        });
+
+        // Create Admin Logic
+        const createAdminModal = document.getElementById('create-admin-modal');
+        document.getElementById('admin-create-admin-btn').addEventListener('click', () => {
+            createAdminModal.classList.remove('hidden');
+        });
+        document.getElementById('close-create-admin-btn').addEventListener('click', () => {
+            createAdminModal.classList.add('hidden');
+            document.getElementById('create-admin-msg').textContent = '';
+            document.getElementById('create-admin-form').reset();
+        });
+        document.getElementById('create-admin-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('new-admin-name').value;
+            const email = document.getElementById('new-admin-email').value;
+            const password = document.getElementById('new-admin-password').value;
+            const mobile = document.getElementById('new-admin-mobile').value;
+            const msgEl = document.getElementById('create-admin-msg');
+            msgEl.textContent = 'Creating...';
+            msgEl.className = 'text-xs text-center font-semibold mt-2 text-slate-500';
+
+            try {
+                const res = await fetch(`${API}/create-admin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ name, email, password, mobile })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    msgEl.textContent = data.message;
+                    msgEl.className = 'text-xs text-center font-semibold mt-2 text-green-600';
+                    setTimeout(() => {
+                        createAdminModal.classList.add('hidden');
+                        document.getElementById('create-admin-form').reset();
+                        msgEl.textContent = '';
+                    }, 1500);
+                } else {
+                    msgEl.textContent = data.error;
+                    msgEl.className = 'text-xs text-center font-semibold mt-2 text-red-600';
+                }
+            } catch (err) {
+                msgEl.textContent = 'Server error.';
+                msgEl.className = 'text-xs text-center font-semibold mt-2 text-red-600';
+            }
+        });
+
+        // Tab Switching
+        const tabs = document.querySelectorAll('.adm-tab');
+        const panels = document.querySelectorAll('.adm-panel');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('bg-brand-800', 'text-white');
+                    t.classList.add('bg-white', 'text-slate-700');
+                });
+                panels.forEach(p => p.classList.add('hidden'));
+
+                tab.classList.remove('bg-white', 'text-slate-700');
+                tab.classList.add('bg-brand-800', 'text-white');
+                const target = tab.getAttribute('data-target');
+                document.getElementById(target).classList.remove('hidden');
+            });
+        });
+
+        // Load All Data
+        async function loadAdminData() {
+            fetchStats();
+            fetchOrders();
+            fetchUsers();
+            fetchVouchers();
+            fetchOnlineOrdersSettings();
+            
+            const decoded = decodeJWT(adminToken);
+            if (decoded && decoded.email === 'mukeshd1008raj@gmail.com') {
+                fetchAdminsList();
+            }
+        }
+
+        // --- Online Orders Settings ---
+        const toggleOnlineOrders = document.getElementById('toggle-online-orders');
+        const orderStatusText = document.getElementById('order-status-text');
+
+        async function fetchOnlineOrdersSettings() {
+            try {
+                const res = await fetch('https://jagirdar.vercel.app/api/settings/frontend');
+                const data = await res.json();
+                if (data.success && data.settings) {
+                    const isEnabled = data.settings.isOrderNowEnabled === true;
+                    toggleOnlineOrders.checked = isEnabled;
+                    orderStatusText.textContent = isEnabled ? 'Enabled' : 'Disabled';
+                    orderStatusText.className = isEnabled ? 'text-xs font-bold text-emerald-600 uppercase tracking-wider' : 'text-xs font-bold text-red-600 uppercase tracking-wider';
+                }
+            } catch (err) {
+                console.error("Failed to fetch settings", err);
+            }
+        }
+
+        toggleOnlineOrders.addEventListener('change', async (e) => {
+            const isEnabled = e.target.checked;
+            toggleOnlineOrders.disabled = true;
+            orderStatusText.textContent = 'Saving...';
+            orderStatusText.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider animate-pulse';
+
+            try {
+                const res = await fetch('https://jagirdar.vercel.app/api/settings/frontend', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isOrderNowEnabled: isEnabled })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    orderStatusText.textContent = isEnabled ? 'Enabled' : 'Disabled';
+                    orderStatusText.className = isEnabled ? 'text-xs font-bold text-emerald-600 uppercase tracking-wider' : 'text-xs font-bold text-red-600 uppercase tracking-wider';
+                } else {
+                    throw new Error("Update failed");
+                }
+            } catch (err) {
+                console.error("Failed to update settings", err);
+                // Revert
+                toggleOnlineOrders.checked = !isEnabled;
+                orderStatusText.textContent = !isEnabled ? 'Enabled' : 'Disabled';
+                orderStatusText.className = !isEnabled ? 'text-xs font-bold text-emerald-600 uppercase tracking-wider' : 'text-xs font-bold text-red-600 uppercase tracking-wider';
+                alert('Failed to update settings. Please try again.');
+            }
+            toggleOnlineOrders.disabled = false;
+        });
+
+        // --- Admin Management (Super Admin) ---
+        async function fetchAdminsList() {
+            try {
+                const res = await fetch(`${API}/admins`, { headers: { 'Authorization': `Bearer ${adminToken}` } });
+                const data = await res.json();
+                if (data.success) {
+                    const tbody = document.getElementById('admin-management-body');
+                    tbody.innerHTML = data.admins.map(a => `
+                        <tr>
+                            <td class="p-3">
+                                <span class="font-bold text-slate-700 block">${a.id}</span>
+                                <span class="text-[10px] text-slate-400">${new Date(a.created_at).toLocaleDateString()}</span>
+                            </td>
+                            <td class="p-3 font-semibold text-slate-800">${a.name}</td>
+                            <td class="p-3">
+                                <div class="text-slate-600">${a.email}</div>
+                                ${a.mobile ? `<div class="text-[10px] font-semibold text-slate-400 mt-0.5"><i class="fa-solid fa-phone mr-1"></i>${a.mobile}</div>` : ''}
+                            </td>
+                            <td class="p-3">
+                                ${a.email === 'mukeshd1008raj@gmail.com' ? '<span class="px-2 py-1 bg-brand-100 text-brand-800 font-bold rounded-lg text-[10px] border border-brand-200">SUPER ADMIN</span>' : 
+                                  a.is_blocked ? '<span class="px-2 py-1 bg-red-100 text-red-800 font-bold rounded-lg text-[10px] border border-red-200">BLOCKED</span>' : 
+                                  '<span class="px-2 py-1 bg-emerald-100 text-emerald-800 font-bold rounded-lg text-[10px] border border-emerald-200">ACTIVE</span>'}
+                            </td>
+                            <td class="p-3 flex flex-wrap gap-2">
+                                ${a.email === 'mukeshd1008raj@gmail.com' ? '' : `
+                                    <button onclick="toggleAdminBlock('${a.id}')" class="px-2 py-1 ${a.is_blocked ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' : 'bg-orange-100 hover:bg-orange-200 text-orange-800'} text-[11px] font-bold rounded-lg transition">${a.is_blocked ? 'Unblock' : 'Block'}</button>
+                                    <button onclick="openChangePwdModal('${a.id}', '${a.name}')" class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-[11px] font-bold rounded-lg transition">Change Pwd</button>
+                                    <button onclick="deleteAdmin('${a.id}')" class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-[11px] font-bold rounded-lg transition"><i class="fa-solid fa-trash"></i></button>
+                                `}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (err) {}
+        }
+        
+        async function toggleAdminBlock(id) {
+            if(!confirm('Are you sure you want to toggle block status for this admin?')) return;
+            try {
+                await fetch(`${API}/admins/${id}/toggle-block`, { method: 'POST', headers: { 'Authorization': `Bearer ${adminToken}` } });
+                fetchAdminsList();
+            } catch (e) {}
+        }
+
+        async function deleteAdmin(id) {
+            if(!confirm('DANGER: Are you sure you want to permanently delete this admin account?')) return;
+            try {
+                await fetch(`${API}/admins/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${adminToken}` } });
+                fetchAdminsList();
+            } catch (e) {}
+        }
+
+        const pwdModal = document.getElementById('change-pwd-modal');
+        window.openChangePwdModal = function(id, name) {
+            document.getElementById('pwd-modal-admin-id').value = id;
+            document.getElementById('pwd-modal-admin-name').textContent = 'For: ' + name;
+            document.getElementById('modal-new-pwd-input').value = '';
+            document.getElementById('pwd-modal-msg').textContent = '';
+            pwdModal.classList.remove('hidden');
+        };
+        document.getElementById('close-pwd-modal-btn').addEventListener('click', () => pwdModal.classList.add('hidden'));
+        document.getElementById('save-pwd-modal-btn').addEventListener('click', async () => {
+            const id = document.getElementById('pwd-modal-admin-id').value;
+            const newPassword = document.getElementById('modal-new-pwd-input').value;
+            const msg = document.getElementById('pwd-modal-msg');
+            msg.textContent = 'Updating...';
+            msg.className = 'text-xs text-center font-semibold mt-1 text-slate-500';
+
+            if(newPassword.length < 6) {
+                msg.className = 'text-xs text-center font-semibold mt-1 text-red-600';
+                return msg.textContent = 'Password must be at least 6 characters.';
+            }
+
+            try {
+                const res = await fetch(`${API}/admins/${id}/change-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+                    body: JSON.stringify({ newPassword })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    msg.className = 'text-xs text-center font-semibold mt-1 text-green-600';
+                    msg.textContent = 'Password successfully changed!';
+                    setTimeout(() => pwdModal.classList.add('hidden'), 1500);
+                } else {
+                    msg.className = 'text-xs text-center font-semibold mt-1 text-red-600';
+                    msg.textContent = data.error;
+                }
+            } catch(e) {
+                msg.className = 'text-xs text-center font-semibold mt-1 text-red-600';
+                msg.textContent = 'Server error.';
+            }
+        });
+
+        // ----------------- Data Loading Methods -----------------
+
+        async function fetchStats() {
+            try {
+                const res = await fetch(`${API}/stats`);
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('stat-revenue').textContent = `₹${data.stats.totalRevenue}`;
+                    document.getElementById('stat-orders').textContent = data.stats.totalOrders;
+                    document.getElementById('stat-books').textContent = data.stats.totalBooksSold;
+                    document.getElementById('stat-users').textContent = data.stats.totalUsers;
+                }
+            } catch (e) { }
+        }
+
+        window.currentOrdersData = [];
+
+        // Orders Search & Filter Handler
+        async function fetchOrders() {
+            const search = document.getElementById('order-search-input').value.trim();
+            const startDate = document.getElementById('order-start-date').value;
+            const endDate = document.getElementById('order-end-date').value;
+            const status = document.getElementById('order-status-filter').value;
+
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+            if (status && status !== 'ALL') params.append('status', status);
+
+            try {
+                const res = await fetch(`${API}/orders?${params.toString()}`);
+                const data = await res.json();
+                const tbody = document.getElementById('admin-orders-table-body');
+                if (data.success && data.orders) {
+                    window.currentOrdersData = data.orders;
+                    if (data.orders.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-500 font-semibold">No orders matching the applied filters.</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = data.orders.map(o => {
+                        const dateFormatted = o.created_at ? o.created_at.slice(0, 10) : 'N/A';
+                        return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 font-bold text-slate-800">#${o.id}</td>
+                            <td class="p-3">
+                                <div class="flex items-center gap-1.5 min-w-[140px]">
+                                    <input type="text" class="quick-tracking-input p-1.5 text-[11px] font-medium border border-slate-300 rounded-lg w-full outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition" 
+                                           id="quick-tracking-${o.id}"
+                                           value="${(o.tracking_number && o.tracking_number !== o.id && o.tracking_number !== 'PENDING' && o.tracking_number !== 'Not Assigned') ? o.tracking_number : ''}" 
+                                           placeholder="Add tracking id">
+                                    <button class="quick-tracking-save-btn bg-brand-800 text-white p-1.5 rounded-lg hover:bg-brand-900 transition flex-shrink-0 shadow-sm" 
+                                            data-id="${o.id}" data-status="${o.status}" title="Save Tracking ID">
+                                        <i class="fa-solid fa-save"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="p-3 font-medium text-slate-600">${new Date(o.created_at).toLocaleDateString()}</td>
+                            <td class="p-3 min-w-[250px] max-w-[350px]">
+                                <div class="font-bold text-slate-800">${o.shipping_name || 'Customer'}</div>
+                                <div class="text-[11px] text-slate-500 mb-1">+91 ${o.shipping_mobile}</div>
+                                ${o.shipping_address ? `
+                                <div class="text-[11px] text-slate-700 leading-relaxed bg-slate-50 p-2 rounded-lg border border-slate-200 mt-2 whitespace-normal break-words shadow-sm">
+                                    <div class="flex items-start gap-1.5">
+                                        <i class="fa-solid fa-location-dot text-brand-600 mt-1"></i>
+                                        <div class="flex-1">
+                                            <div class="font-medium">${o.shipping_address}</div>
+                                            <div class="text-slate-500 text-[10px] mt-0.5">${o.shipping_city ? o.shipping_city + ' - ' : ''}${o.shipping_pincode || ''}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                            </td>
+                            <td class="p-3 font-semibold">${o.quantity}</td>
+                            <td class="p-3 font-bold text-brand-800">₹${o.total_amount}</td>
+                            <td class="p-3 font-medium text-slate-600">${o.payment_method}</td>
+                            <td class="p-3 font-mono text-[10px] text-slate-500">${o.razorpay_payment_id || 'N/A'}</td>
+                            <td class="p-3">
+                                ${o.status === 'PAID' || o.status === 'PENDING' ? `
+                                    <button class="px-3 py-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-full hover:bg-amber-600 transition shadow-sm ship-action-btn flex items-center gap-1" data-id="${o.id}">
+                                        <i class="fa-solid fa-truck-fast"></i> Ship Now
+                                    </button>
+                                ` : `
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                        o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' :
+                                        o.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
+                                        'bg-slate-100 text-slate-700'
+                                    }">${o.status === 'IN_TRANSIT' ? 'SHIPPED' : o.status}</span>
+                                `}
+                            </td>
+                            <td class="p-3">
+                                <button class="px-3 py-1 bg-brand-800 text-white text-[11px] font-bold rounded-lg hover:bg-brand-900 update-status-btn"
+                                    data-id="${o.id}" data-status="${o.status}" data-tracking="${o.tracking_number || ''}">Edit</button>
+                            </td>
+                            <td class="p-3">
+                                <a href="bill.html?id=${o.id}" target="_blank" class="px-3 py-1 bg-slate-200 text-slate-800 text-[11px] font-bold rounded-lg hover:bg-slate-300 flex items-center justify-center gap-1 w-max shadow-sm transition">
+                                    <i class="fa-solid fa-file-invoice"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                    }).join('');
+
+                    // Attach Shipped Button Listeners
+                    document.querySelectorAll('.ship-action-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            btn.disabled = true;
+                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Shipping...';
+                            const orderId = btn.getAttribute('data-id');
+                            try {
+                                const res = await fetch(`${API}/orders/${orderId}/ship`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ isShipped: true })
+                                });
+                                const resData = await res.json();
+                                if (resData.success) {
+                                    fetchOrders();
+                                    fetchStats();
+                                }
+                            } catch (err) {
+                                btn.disabled = false;
+                                btn.innerHTML = '<i class="fa-solid fa-truck-fast"></i> Ship Now';
+                            }
+                        });
+                    });
+
+                    // Inline Tracking Save Listeners
+                    document.querySelectorAll('.quick-tracking-save-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            const orderId = btn.getAttribute('data-id');
+                            const status = btn.getAttribute('data-status');
+                            const input = document.getElementById(`quick-tracking-${orderId}`);
+                            const trackingNumber = input.value.trim();
+                            
+                            btn.disabled = true;
+                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                            
+                            try {
+                                const res = await fetch(`${API}/orders/${orderId}/status`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ status, trackingNumber })
+                                });
+                                const resData = await res.json();
+                                if (resData.success) {
+                                    btn.innerHTML = '<i class="fa-solid fa-check text-emerald-300"></i>';
+                                    setTimeout(() => fetchOrders(), 1000);
+                                } else {
+                                    alert('Failed to save tracking ID.');
+                                    btn.innerHTML = '<i class="fa-solid fa-save"></i>';
+                                    btn.disabled = false;
+                                }
+                            } catch (err) {
+                                btn.innerHTML = '<i class="fa-solid fa-save"></i>';
+                                btn.disabled = false;
+                            }
+                        });
+                    });
+
+                    // Edit Status Modal Listeners
+                    document.querySelectorAll('.update-status-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            currentSelectedOrderId = btn.getAttribute('data-id');
+                            document.getElementById('modal-status-select').value = btn.getAttribute('data-status');
+                            document.getElementById('modal-tracking-input').value = btn.getAttribute('data-tracking');
+                            document.getElementById('status-modal').classList.remove('hidden');
+                        });
+                    });
+                }
+            } catch (e) { }
+        }
+
+        document.getElementById('apply-filters-btn').addEventListener('click', fetchOrders);
+        document.getElementById('reset-filters-btn').addEventListener('click', () => {
+            document.getElementById('order-search-input').value = '';
+            document.getElementById('order-start-date').value = '';
+            document.getElementById('order-end-date').value = '';
+            document.getElementById('order-status-filter').value = 'ALL';
+            fetchOrders();
+        });
+        document.getElementById('refresh-orders-btn').addEventListener('click', fetchOrders);
+
+        // Export Orders Modal Logic
+        const exportModal = document.getElementById('export-modal');
+        document.getElementById('export-excel-btn').addEventListener('click', () => {
+            // Pre-fill with current filter dates if they exist
+            document.getElementById('export-start-date').value = document.getElementById('order-start-date').value;
+            document.getElementById('export-end-date').value = document.getElementById('order-end-date').value;
+            exportModal.classList.remove('hidden');
+        });
+        
+        document.getElementById('close-export-modal-btn').addEventListener('click', () => {
+            exportModal.classList.add('hidden');
+        });
+
+        document.getElementById('download-excel-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('download-excel-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+            btn.disabled = true;
+
+            const startDate = document.getElementById('export-start-date').value;
+            const endDate = document.getElementById('export-end-date').value;
+            
+            const params = new URLSearchParams();
+            if (startDate) params.append('startDate', startDate);
+            if (endDate) params.append('endDate', endDate);
+
+            try {
+                const res = await fetch(`${API}/orders?${params.toString()}`);
+                const data = await res.json();
+                
+                if (data.success && data.orders && data.orders.length > 0) {
+                    const formattedData = data.orders.map(o => ({
+                        'Order ID': o.id || '',
+                        'Date': o.created_at ? o.created_at.slice(0, 10) : '',
+                        'Customer Registered Name': o.customer_registered_name || '',
+                        'Customer Registered Email': o.customer_email || '',
+                        'Customer Registered Mobile': o.customer_registered_mobile || '',
+                        'Shipping Name': o.shipping_name || '',
+                        'Shipping Mobile': o.shipping_mobile || '',
+                        'Shipping Address': o.shipping_address || '',
+                        'Shipping City': o.shipping_city || '',
+                        'Shipping Pincode': o.shipping_pincode || '',
+                        'Total Amount': o.total_amount || 0,
+                        'Status': o.status || '',
+                        'Tracking Number': o.tracking_number || '',
+                        'Razorpay Payment ID': o.razorpay_payment_id || '',
+                        'Transaction Status': o.txn_status || ''
+                    }));
+
+                    // Generate Excel file
+                    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+                    
+                    // Auto-size columns slightly
+                    const wscols = [
+                        {wch: 15}, {wch: 12}, {wch: 25}, {wch: 30}, {wch: 15},
+                        {wch: 25}, {wch: 15}, {wch: 40}, {wch: 15}, {wch: 10},
+                        {wch: 10}, {wch: 12}, {wch: 20}, {wch: 25}, {wch: 15}
+                    ];
+                    worksheet['!cols'] = wscols;
+
+                    XLSX.writeFile(workbook, `orders_export_${new Date().toISOString().slice(0,10)}.xlsx`);
+                    exportModal.classList.add('hidden');
+                } else {
+                    alert('No orders found for this date range.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to generate export.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // Fetch & Manage Users (Block / Unblock)
+        async function fetchUsers() {
+            try {
+                const res = await fetch(`${API}/users`);
+                const data = await res.json();
+                const tbody = document.getElementById('admin-users-table-body');
+                if (data.success && data.users) {
+                    const userSelect = document.getElementById('v-user-select');
+                    if (userSelect) {
+                        userSelect.innerHTML = `<option value="">-- All Customers (Public Voucher) --</option>` +
+                            data.users.map(u => `<option value="${u.mobile}">${u.name} (+91 ${u.mobile})</option>`).join('');
+
+                        userSelect.onchange = () => {
+                            document.getElementById('v-mobile').value = userSelect.value;
+                        };
+                    }
+
+                    if (data.users.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500">No registered users found.</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = data.users.map(u => `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 font-bold text-slate-700">${u.id}</td>
+                            <td class="p-3 font-bold text-slate-900">${u.name}</td>
+                            <td class="p-3 font-medium">+91 ${u.mobile}</td>
+                            <td class="p-3 text-slate-600">${u.email || 'N/A'}</td>
+                            <td class="p-3 font-semibold">${u.total_orders || 0} orders</td>
+                            <td class="p-3 font-bold text-brand-800">₹${u.total_spent || 0}</td>
+                            <td class="p-3">
+                                ${u.account_status === 'deleted' 
+                                    ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800"><i class="fa-solid fa-trash-can mr-1"></i>DELETED</span>`
+                                    : `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${u.is_blocked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${u.is_blocked ? 'BLOCKED' : 'ACTIVE'}</span>`
+                                }
+                            </td>
+                            <td class="p-3">
+                                ${u.account_status === 'deleted' ? `<span class="text-xs text-slate-400 italic">No actions available</span>` : 
+                                    `<button class="px-3 py-1 text-[11px] font-bold rounded-lg transition toggle-block-btn ${u.is_blocked ? 'bg-emerald-700 hover:bg-emerald-800 text-white' : 'bg-red-700 hover:bg-red-800 text-white'
+                                    }" data-id="${u.id}" data-blocked="${u.is_blocked}">${u.is_blocked ? 'Unblock Account' : 'Block Account'}</button>`
+                                }
+                            </td>
+                        </tr>
+                    `).join('');
+                    document.querySelectorAll('.toggle-block-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            const userId = btn.getAttribute('data-id');
+                            const currentlyBlocked = btn.getAttribute('data-blocked') === '1';
+                            const isBlocked = !currentlyBlocked;
+
+                            try {
+                                const res = await fetch(`${API}/users/${userId}/block`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ isBlocked })
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                    fetchUsers();
+                                }
+                            } catch (e) { }
+                        });
+                    });
+                }
+            } catch (e) { }
+        }
+
+        document.getElementById('refresh-users-btn').addEventListener('click', fetchUsers);
+        
+        // Export Users Logic
+        document.getElementById('export-users-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('export-users-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Exporting...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API}/users`);
+                const data = await res.json();
+                
+                if (data.success && data.users && data.users.length > 0) {
+                    const formattedData = data.users.map(u => ({
+                        'User ID': u.id || '',
+                        'Date Joined': u.created_at ? u.created_at.slice(0, 10) : '',
+                        'Customer Name': u.name || '',
+                        'Email Address': u.email || '',
+                        'Mobile Number': u.mobile || '',
+                        'City': u.city || '',
+                        'Pincode': u.pincode || '',
+                        'Address': u.address || '',
+                        'Account Status': u.account_status === 'deleted' ? 'Deleted' : (u.is_blocked === 1 ? 'Blocked' : 'Active')
+                    }));
+
+                    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+
+                    // Auto-size columns
+                    const colWidths = [
+                        { wch: 15 }, // User ID
+                        { wch: 15 }, // Date Joined
+                        { wch: 25 }, // Name
+                        { wch: 30 }, // Email
+                        { wch: 15 }, // Mobile
+                        { wch: 15 }, // City
+                        { wch: 10 }, // Pincode
+                        { wch: 40 }, // Address
+                        { wch: 15 }  // Status
+                    ];
+                    worksheet['!cols'] = colWidths;
+
+                    XLSX.writeFile(workbook, `users_export_${new Date().toISOString().slice(0,10)}.xlsx`);
+                } else {
+                    alert('No users found to export.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to generate users export.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // Status Modal Actions
+        document.getElementById('close-modal-btn').addEventListener('click', () => {
+            document.getElementById('status-modal').classList.add('hidden');
+        });
+
+        document.getElementById('save-modal-btn').addEventListener('click', async () => {
+            if (!currentSelectedOrderId) return;
+            const status = document.getElementById('modal-status-select').value;
+            const trackingNumber = document.getElementById('modal-tracking-input').value;
+
+            try {
+                const res = await fetch(`${API}/orders/${currentSelectedOrderId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status, trackingNumber })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('status-modal').classList.add('hidden');
+                    fetchOrders();
+                    fetchStats();
+                }
+            } catch (e) { }
+        });
+
+        // Target Audience Sub-Box Dynamic Toggle
+        const targetModeSelect = document.getElementById('v-target-mode');
+        if (targetModeSelect) {
+            targetModeSelect.addEventListener('change', () => {
+                document.querySelectorAll('.target-sub-box').forEach(box => box.classList.add('hidden'));
+                const mode = targetModeSelect.value;
+                if (mode === 'SPECIFIC_USER') document.getElementById('target-specific-user-box').classList.remove('hidden');
+                else if (mode === 'DATE_RANGE') document.getElementById('target-date-range-box').classList.remove('hidden');
+                else if (mode === 'LAST_DAYS') document.getElementById('target-last-days-box').classList.remove('hidden');
+                else if (mode === 'MIN_ORDERS') document.getElementById('target-min-orders-box').classList.remove('hidden');
+                else if (mode === 'MIN_SPENT') document.getElementById('target-min-spent-box').classList.remove('hidden');
+            });
+        }
+
+        // Vouchers Table & Create
+        async function fetchVouchers() {
+            try {
+                const res = await fetch(`${API}/vouchers`);
+                const data = await res.json();
+                const tbody = document.getElementById('vouchers-table-body');
+                if (data.success && data.vouchers) {
+                    tbody.innerHTML = data.vouchers.map(v => `
+                        <tr>
+                            <td class="p-3 font-bold text-brand-800">${v.code}</td>
+                            <td class="p-3 font-semibold">${v.discount_type === 'FLAT' ? '₹' + v.discount_value + ' Flat' : v.discount_value + '% Off'}</td>
+                            <td class="p-3">₹${v.min_order_amount}</td>
+                            <td class="p-3">${v.assigned_mobile ? '+91 ' + v.assigned_mobile : '<span class="text-slate-400">All Customers</span>'}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Active</span></td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) { }
+        }
+
+        document.getElementById('create-voucher-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = document.getElementById('v-code').value;
+            const discountType = document.getElementById('v-type').value;
+            const discountValue = parseInt(document.getElementById('v-value').value || '0', 10);
+            const minOrderAmount = parseInt(document.getElementById('v-min').value || '0', 10);
+
+            const targetMode = document.getElementById('v-target-mode').value;
+            const specificMobile = document.getElementById('v-mobile').value.trim();
+            const startDate = document.getElementById('v-start-date').value;
+            const endDate = document.getElementById('v-end-date').value;
+            const lastDays = document.getElementById('v-last-days').value;
+            const minOrders = document.getElementById('v-min-orders').value;
+            const minSpent = document.getElementById('v-min-spent').value;
+
+            const msg = document.getElementById('v-msg');
+
+            try {
+                const res = await fetch(`${API}/vouchers/smart-assign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code, discountType, discountValue, minOrderAmount,
+                        targetMode, specificMobile, startDate, endDate, lastDays, minOrders, minSpent
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Failed to create vouchers');
+                msg.textContent = data.message;
+                msg.className = 'text-xs text-center font-semibold text-emerald-600';
+                fetchVouchers();
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.className = 'text-xs text-center font-semibold text-red-600';
+            }
+        });
+    </script>
+</body>
+
+</html>
+
+

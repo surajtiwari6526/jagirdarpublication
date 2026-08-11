@@ -1,0 +1,16 @@
+{
+    "version":  2,
+    "rewrites":  [
+                     {
+                         "source":  "/api/(.*)",
+                         "destination":  "/api/index.js"
+                     }
+                 ],
+    "env":  {
+                "GMAIL_USER":  "jagidar.support@gmail.com",
+                "JWT_SECRET":  "jagirdar_publications_secret_jwt_key_2026_secure",
+                "RAZORPAY_KEY_ID":  "rzp_test_TMapzIJuhAcb50",
+                "GMAIL_PASS":  "soiv tesx oqig njao",
+                "RAZORPAY_KEY_SECRET":  "buZGmFcnpZH8vYN0W6ho6Zwa"
+            }
+}
