@@ -70,3 +70,6 @@ node_modules/
 
 .vercel
 .env*
+api/serviceAccountKey.json
+firebaseServiceAccount.js
+.env
