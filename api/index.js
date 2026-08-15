@@ -49,27 +49,55 @@ const authenticateUser = async (req, res, next) => {
     }
 };
 
+// Helper: Get active store book price
+async function getStoreBookPrice() {
+    try {
+        const doc = await db.collection('settings').doc('frontend').get();
+        if (doc.exists && doc.data() && doc.data().bookPrice !== undefined) {
+            const price = parseInt(doc.data().bookPrice, 10);
+            if (!isNaN(price) && price > 0) {
+                return price;
+            }
+        }
+    } catch (err) {
+        console.error('[getStoreBookPrice Error]:', err);
+    }
+    return 399;
+}
+
 // Settings
 app.get('/api/settings/frontend', async (req, res) => {
     try {
         const doc = await db.collection('settings').doc('frontend').get();
         if (!doc.exists) {
-            return res.json({ success: true, settings: { isOrderNowEnabled: false } });
+            return res.json({ success: true, settings: { isOrderNowEnabled: false, bookPrice: 399 } });
         }
-        return res.json({ success: true, settings: doc.data() });
+        const data = doc.data() || {};
+        if (data.bookPrice === undefined) {
+            data.bookPrice = 399;
+        }
+        return res.json({ success: true, settings: data });
     } catch (err) {
         console.error('[Settings Error]:', err);
-        return res.json({ success: false, settings: { isOrderNowEnabled: false } });
+        return res.json({ success: false, settings: { isOrderNowEnabled: false, bookPrice: 399 } });
     }
 });
 
 app.put('/api/settings/frontend', async (req, res) => {
     try {
-        const { isOrderNowEnabled } = req.body;
-        await db.collection('settings').doc('frontend').set({
-            isOrderNowEnabled: !!isOrderNowEnabled
-        }, { merge: true });
-        return res.json({ success: true });
+        const { isOrderNowEnabled, bookPrice } = req.body;
+        const updateData = {};
+        if (isOrderNowEnabled !== undefined) {
+            updateData.isOrderNowEnabled = !!isOrderNowEnabled;
+        }
+        if (bookPrice !== undefined) {
+            const parsedPrice = parseInt(bookPrice, 10);
+            if (!isNaN(parsedPrice) && parsedPrice > 0) {
+                updateData.bookPrice = parsedPrice;
+            }
+        }
+        await db.collection('settings').doc('frontend').set(updateData, { merge: true });
+        return res.json({ success: true, settings: updateData });
     } catch (err) {
         console.error('[Settings Update Error]:', err);
         return res.json({ success: false, error: 'Failed to update settings.' });
@@ -248,10 +276,21 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
         }
 
         const userByMobileQuery = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
-        let existingUser = !userByMobileQuery.empty;
+        let existingUser = false;
+        if (!userByMobileQuery.empty) {
+            const uData = userByMobileQuery.docs[0].data();
+            if (uData.account_status !== 'deleted') {
+                existingUser = true;
+            }
+        }
         if (!existingUser && email) {
-            const userByEmailQuery = await db.collection('users').where('email', '==', email).limit(1).get();
-            existingUser = !userByEmailQuery.empty;
+            const userByEmailQuery = await db.collection('users').where('email', '==', email.trim().toLowerCase()).limit(1).get();
+            if (!userByEmailQuery.empty) {
+                const uData = userByEmailQuery.docs[0].data();
+                if (uData.account_status !== 'deleted') {
+                    existingUser = true;
+                }
+            }
         }
 
         if (existingUser) {
@@ -307,7 +346,10 @@ app.post('/api/auth/send-signup-mobile-otp', async (req, res) => {
 
         const userByMobileQuery = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
         if (!userByMobileQuery.empty) {
-            return res.status(400).json({ success: false, error: 'User with this mobile number already exists. Please login.' });
+            const uData = userByMobileQuery.docs[0].data();
+            if (uData.account_status !== 'deleted') {
+                return res.status(400).json({ success: false, error: 'User with this mobile number already exists. Please login.' });
+            }
         }
 
         const otp = crypto.randomInt(100000, 999999).toString();
@@ -362,7 +404,10 @@ app.post('/api/auth/send-signup-email-otp', async (req, res) => {
 
         const userByEmailQuery = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
         if (!userByEmailQuery.empty) {
-            return res.status(400).json({ success: false, error: 'User with this email already exists.' });
+            const uData = userByEmailQuery.docs[0].data();
+            if (uData.account_status !== 'deleted') {
+                return res.status(400).json({ success: false, error: 'User with this email already exists.' });
+            }
         }
 
         const emailOtp = crypto.randomInt(100000, 999999).toString();
@@ -417,19 +462,28 @@ app.post('/api/auth/verify-signup', async (req, res) => {
             return res.status(400).json({ success: false, error: 'All fields are required.' });
         }
 
-        // Validate Mobile OTP (must be marked as verified)
+        const { otp, emailOtp } = req.body;
+
+        // Validate Mobile OTP
         const sessionDoc = await db.collection('otp_sessions').doc(cleanMobile).get();
         const session = sessionDoc.exists ? sessionDoc.data() : null;
-        if (!session || !session.is_verified || Date.now() > session.expires_at) {
-            return res.status(400).json({ success: false, error: 'Mobile number not verified.' });
+        if (!session || Date.now() > session.expires_at) {
+            return res.status(400).json({ success: false, error: 'Mobile OTP expired or not found. Please request a new OTP.' });
+        }
+        if (!session.is_verified && session.otp_code !== (otp || '').trim()) {
+            return res.status(400).json({ success: false, error: 'Invalid Mobile OTP code.' });
         }
 
         // Validate Email OTP if email provided
         if (cleanEmail) {
             const emailSessionDoc = await db.collection('email_otp_sessions').doc(cleanEmail).get();
             const emailSession = emailSessionDoc.exists ? emailSessionDoc.data() : null;
-            if (!emailSession || !emailSession.is_verified || Date.now() > emailSession.expires_at) {
-                return res.status(400).json({ success: false, error: 'Email address not verified.' });
+            if (!emailSession || Date.now() > emailSession.expires_at) {
+                return res.status(400).json({ success: false, error: 'Email OTP expired or not found. Please request a new OTP.' });
+            }
+            const providedEmailOtp = (emailOtp || otp || '').trim();
+            if (!emailSession.is_verified && emailSession.otp_code !== providedEmailOtp) {
+                return res.status(400).json({ success: false, error: 'Invalid Email OTP code.' });
             }
             await db.collection('email_otp_sessions').doc(cleanEmail).delete();
         }
@@ -437,11 +491,44 @@ app.post('/api/auth/verify-signup', async (req, res) => {
         await db.collection('otp_sessions').doc(cleanMobile).delete();
 
         const passwordHash = hashPassword(password);
-        const userId = 'USR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
         const now = new Date().toISOString();
 
-        const user = { id: userId, name: name, mobile: cleanMobile, email: cleanEmail, password_hash: passwordHash, address: '', city: '', pincode: '', is_blocked: 0, created_at: now, is_email_verified: 1, is_mobile_verified: 1 };
-        await db.collection('users').doc(userId).set(user);
+        // Check if an existing user record exists (active or deleted)
+        let userId;
+        const userByMobile = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
+        let existingDoc = !userByMobile.empty ? userByMobile.docs[0] : null;
+
+        if (!existingDoc && cleanEmail) {
+            const userByEmail = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
+            if (!userByEmail.empty) existingDoc = userByEmail.docs[0];
+        }
+
+        if (existingDoc) {
+            const existingData = existingDoc.data();
+            if (existingData.account_status !== 'deleted') {
+                return res.status(400).json({ success: false, error: 'User with this mobile or email already exists. Please login.' });
+            }
+            userId = existingDoc.id;
+        } else {
+            userId = 'USR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+        }
+
+        const user = {
+            id: userId,
+            name: name,
+            mobile: cleanMobile,
+            email: cleanEmail,
+            password_hash: passwordHash,
+            address: '',
+            city: '',
+            pincode: '',
+            is_blocked: 0,
+            account_status: 'active',
+            created_at: now,
+            is_email_verified: 1,
+            is_mobile_verified: 1
+        };
+        await db.collection('users').doc(userId).set(user, { merge: true });
 
         const token = jwt.sign({ id: user.id, mobile: user.mobile, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
 
@@ -461,20 +548,26 @@ app.post('/api/auth/login-password', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Email/Mobile and Password are required.' });
         }
 
-        // Identifier can be mobile or email
-        let cleanMobile = identifier.replace(/\D/g, '').slice(-10);
+        const trimmedIdentifier = identifier.trim();
+        const cleanEmail = trimmedIdentifier.toLowerCase();
         let user = null;
-        if (/^[6-9]\d{9}$/.test(cleanMobile)) {
-            const userQ = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
+
+        if (trimmedIdentifier.includes('@')) {
+            // Search strictly by email
+            const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
             if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
-        }
-        if (!user) {
-            const userQ = await db.collection('users').where('email', '==', identifier.trim()).limit(1).get();
-            if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
+        } else {
+            // Search strictly by 10-digit mobile number
+            let cleanMobile = trimmedIdentifier.replace(/\D/g, '').slice(-10);
+            if (/^[6-9]\d{9}$/.test(cleanMobile)) {
+                const userQ = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
+                if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
+            }
         }
 
+        // Fallback: If not found yet, try querying email directly
         if (!user) {
-            const userQ = await db.collection('users').where('email', '==', identifier.trim().toLowerCase()).limit(1).get();
+            const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
             if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
         }
 
@@ -488,7 +581,7 @@ app.post('/api/auth/login-password', async (req, res) => {
             return res.status(403).json({ success: false, error: 'Account not found or deleted.' });
         }
         if (!user.password_hash) {
-            return res.status(400).json({ success: false, error: 'Password not set. Please use forgot password or login via OTP.' });
+            return res.status(400).json({ success: false, error: 'Password not set for this Google account. Please click "Sign in with Google" or use "Forgot Password".' });
         }
 
         const passwordHash = hashPassword(password);
@@ -496,8 +589,8 @@ app.post('/api/auth/login-password', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Invalid credentials.' });
         }
 
-        const token = jwt.sign({ id: user.id, mobile: user.mobile, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
-        res.json({ success: true, message: 'Login successful!', token, user: { id: user.id, name: user.name, mobile: user.mobile, email: user.email, is_mobile_verified: user.is_mobile_verified || 0, is_email_verified: user.is_email_verified || 0, loggedIn: true } });
+        const token = jwt.sign({ id: user.id, mobile: user.mobile || '', name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ success: true, message: 'Login successful!', token, user: { id: user.id, name: user.name, mobile: user.mobile || '', email: user.email, is_mobile_verified: user.is_mobile_verified || 0, is_email_verified: user.is_email_verified || 0, loggedIn: true } });
     } catch (err) {
         console.error('[Login Error]:', err);
         res.status(500).json({ success: false, error: 'Login failed.' });
@@ -510,13 +603,34 @@ app.post('/api/auth/google-login', async (req, res) => {
         const { email, name, firebaseUid } = req.body;
         if (!email) return res.status(400).json({ success: false, error: 'Google email is required.' });
 
+        const cleanEmail = email.trim().toLowerCase();
         let user = null;
-        const userQ = await db.collection('users').where('email', '==', email.trim().toLowerCase()).limit(1).get();
-        if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
+        const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
         
-        if (!user) {
-            // New user via Google - prompt them to set a password on frontend
-            return res.json({ success: true, isNewUser: true, email: email.trim().toLowerCase(), name: name.trim(), firebaseUid });
+        if (!userQ.empty) {
+            user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
+        } else {
+            // Auto-create user account for Google Signup instantly
+            const userId = 'USR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+            const now = new Date().toISOString();
+            user = {
+                id: userId,
+                name: (name || 'Google User').trim(),
+                email: cleanEmail,
+                mobile: '',
+                password_hash: '',
+                address: '',
+                city: '',
+                pincode: '',
+                is_blocked: 0,
+                account_status: 'active',
+                is_email_verified: 1,
+                is_mobile_verified: 0,
+                auth_provider: 'google',
+                firebase_uid: firebaseUid || '',
+                created_at: now
+            };
+            await db.collection('users').doc(userId).set(user);
         }
 
         if (user.is_blocked === 1) {
@@ -526,8 +640,8 @@ app.post('/api/auth/google-login', async (req, res) => {
             return res.status(403).json({ success: false, error: 'Account not found or deleted.' });
         }
 
-        const token = jwt.sign({ id: user.id, mobile: user.mobile, name: user.name }, JWT_SECRET, { expiresIn: '30d' });
-        res.json({ success: true, message: 'Google login successful!', token, user: { id: user.id, name: user.name, mobile: user.mobile, email: user.email, is_mobile_verified: user.is_mobile_verified || 0, is_email_verified: user.is_email_verified || 0, loggedIn: true } });
+        const token = jwt.sign({ id: user.id, mobile: user.mobile || '', name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ success: true, message: 'Google login successful!', token, user: { id: user.id, name: user.name, mobile: user.mobile || '', email: user.email, is_mobile_verified: user.is_mobile_verified || 0, is_email_verified: user.is_email_verified || 1, loggedIn: true } });
     } catch (err) {
         console.error('[Google Login Error]:', err);
         res.status(500).json({ success: false, error: 'Server error during Google login.' });
@@ -539,8 +653,9 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
     try {
         const { email, name, mobile, password, otp } = req.body;
         const cleanMobile = (mobile || '').replace(/\D/g, '').slice(-10);
+        const cleanEmail = (email || '').trim().toLowerCase();
 
-        if (!email || !password || !cleanMobile || !otp) {
+        if (!cleanEmail || !password || !cleanMobile || !otp) {
             return res.status(400).json({ success: false, error: 'Email, password, mobile, and OTP are required.' });
         }
 
@@ -554,36 +669,53 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
         // Delete OTP session after successful verification
         await db.collection('otp_sessions').doc(cleanMobile).delete();
 
-        // Check if user already exists
-        const userQ = await db.collection('users').where('email', '==', email.trim().toLowerCase()).limit(1).get();
-        if (!userQ.empty) {
-            return res.status(400).json({ success: false, error: 'User already exists with this email.' });
-        }
+        const passwordHash = hashPassword(password);
+        const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
+        
+        let userId;
+        let userDoc;
 
-        const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
-        const userId = 'USR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-        const now = new Date().toISOString();
+        if (!userQ.empty) {
+            // Update existing Google user record with mobile & password
+            userId = userQ.docs[0].id;
+            userDoc = {
+                ...userQ.docs[0].data(),
+                mobile: cleanMobile,
+                password_hash: passwordHash,
+                is_mobile_verified: 1,
+                is_email_verified: 1
+            };
+            await db.collection('users').doc(userId).update({
+                mobile: cleanMobile,
+                password_hash: passwordHash,
+                is_mobile_verified: 1,
+                is_email_verified: 1
+            });
+        } else {
+            // Create new user record
+            userId = 'USR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+            const now = new Date().toISOString();
+            userDoc = { 
+                id: userId, 
+                name: (name || 'User').trim(), 
+                mobile: cleanMobile, 
+                email: cleanEmail, 
+                password_hash: passwordHash,
+                address: '', 
+                city: '', 
+                pincode: '', 
+                is_blocked: 0, 
+                account_status: 'active',
+                is_email_verified: 1,
+                is_mobile_verified: 1,
+                auth_provider: 'google',
+                created_at: now 
+            };
+            await db.collection('users').doc(userId).set(userDoc);
+        }
         
-        const newUser = { 
-            id: userId, 
-            name: name.trim(), 
-            mobile: cleanMobile, 
-            email: email.trim().toLowerCase(), 
-            password_hash: passwordHash,
-            address: '', 
-            city: '', 
-            pincode: '', 
-            is_blocked: 0, 
-            account_status: 'active',
-            is_email_verified: 1,
-            is_mobile_verified: 1,
-            created_at: now 
-        };
-        
-        await db.collection('users').doc(userId).set(newUser);
-        
-        const token = jwt.sign({ id: newUser.id, mobile: newUser.mobile, name: newUser.name }, JWT_SECRET, { expiresIn: '30d' });
-        res.json({ success: true, message: 'Account created successfully!', token, user: { id: newUser.id, name: newUser.name, mobile: newUser.mobile, email: newUser.email, is_mobile_verified: newUser.is_mobile_verified || 0, is_email_verified: newUser.is_email_verified || 0, loggedIn: true } });
+        const token = jwt.sign({ id: userDoc.id, mobile: userDoc.mobile, name: userDoc.name, email: userDoc.email }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ success: true, message: 'Account updated successfully!', token, user: { id: userDoc.id, name: userDoc.name, mobile: userDoc.mobile, email: userDoc.email, is_mobile_verified: userDoc.is_mobile_verified || 0, is_email_verified: userDoc.is_email_verified || 0, loggedIn: true } });
     } catch (err) {
         console.error('[Google Signup Complete Error]:', err);
         res.status(500).json({ success: false, error: 'Server error during signup completion.' });
@@ -1053,7 +1185,8 @@ app.post('/api/vouchers/apply', async (req, res) => {
         }
 
         // 4. Check Minimum Order Amount
-        const amount = parseInt(cartAmount || 399, 10);
+        const defaultBookPrice = await getStoreBookPrice();
+        const amount = parseInt(cartAmount || defaultBookPrice, 10);
         if (amount < voucher.min_order_amount) {
             return res.status(400).json({
                 success: false,
@@ -1109,7 +1242,7 @@ app.post('/api/orders/create', async (req, res) => {
         }
 
         const qty = Math.max(1, parseInt(quantity || 1, 10));
-        const unitPrice = 399;
+        const unitPrice = await getStoreBookPrice();
         const subtotal = qty * unitPrice;
 
         let discount = 0;
@@ -1185,13 +1318,21 @@ app.get('/api/orders/:id', authenticateUser, async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user.id;
+        const userMobile = req.user.mobile || '';
         
         const orderDoc = await db.collection('orders').doc(id).get();
-        if (!orderDoc.exists || (req.user.role !== 'admin' && orderDoc.data().user_id !== userId)) {
-            return res.status(404).json({ success: false, error: 'Order not found or unauthorized.' });
+        if (!orderDoc.exists) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
         }
-        let order = { id: orderDoc.id, ...orderDoc.data() };
+        const orderData = orderDoc.data();
+        const isOwner = orderData.user_id === userId || (userMobile && orderData.shipping_mobile === userMobile);
+        const isAdmin = req.user.role === 'admin';
         
+        if (!isAdmin && !isOwner) {
+            return res.status(403).json({ success: false, error: 'Unauthorized to view this order.' });
+        }
+        
+        let order = { id: orderDoc.id, ...orderData };
         const tSnapshot = await db.collection('transactions').where('order_id', '==', id).limit(1).get();
         order.transaction_id = tSnapshot.empty ? null : tSnapshot.docs[0].id;
         res.json({ success: true, order });
@@ -1201,11 +1342,73 @@ app.get('/api/orders/:id', authenticateUser, async (req, res) => {
     }
 });
 
-// Update Order with Manual UTR (Direct UPI)
+// Get Public Order Details (For Invoice/Bill viewing - STRICT PAID CHECK)
+app.get('/api/orders/:id/public', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const orderDoc = await db.collection('orders').doc(id).get();
+        if (!orderDoc.exists) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+        const orderData = orderDoc.data();
+        const isPaid = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(orderData.status);
+
+        if (!isPaid) {
+            return res.status(400).json({ 
+                success: false, 
+                isPaid: false, 
+                orderId: id,
+                status: orderData.status,
+                error: 'Official bill/invoice can only be generated for confirmed orders with verified payment.' 
+            });
+        }
+
+        let order = { id: orderDoc.id, ...orderData };
+        const tSnapshot = await db.collection('transactions').where('order_id', '==', id).limit(1).get();
+        order.transaction_id = tSnapshot.empty ? null : tSnapshot.docs[0].id;
+        res.json({ success: true, isPaid: true, order });
+    } catch (err) {
+        console.error('[Fetch Public Order Error]:', err);
+        res.status(500).json({ success: false, error: 'Failed to fetch order details.' });
+    }
+});
+
+// Get Public Order Status (For Order Confirmation Verification)
+app.get('/api/orders/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const orderDoc = await db.collection('orders').doc(id).get();
+        if (!orderDoc.exists) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+        const order = { id: orderDoc.id, ...orderDoc.data() };
+        const isPaid = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(order.status);
+        res.json({
+            success: true,
+            orderId: id,
+            status: order.status,
+            isPaid,
+            totalAmount: order.total_amount,
+            quantity: order.quantity,
+            paymentMethod: order.payment_method,
+            razorpayPaymentId: order.razorpay_payment_id || null,
+            createdAt: order.created_at
+        });
+    } catch (err) {
+        console.error('[Order Status Error]:', err);
+        res.status(500).json({ success: false, error: 'Failed to fetch order status.' });
+    }
+});
+
+// Update Order with Manual UTR (Direct UPI) - SECURE PENDING_VERIFICATION FLOW
 app.put('/api/orders/:id/utr', async (req, res) => {
     try {
         const { id } = req.params;
         const { utr, paymentMethod } = req.body;
+
+        if (!utr || String(utr).trim().length < 6) {
+            return res.status(400).json({ success: false, error: 'Invalid UTR reference number.' });
+        }
 
         const orderDoc = await db.collection('orders').doc(id).get();
         if (!orderDoc.exists) {
@@ -1213,32 +1416,33 @@ app.put('/api/orders/:id/utr', async (req, res) => {
         }
         const order = { id: orderDoc.id, ...orderDoc.data() };
 
-        // Create a transaction record manually for this UTR
+        // Create a transaction record manually for this UTR marked PENDING_VERIFICATION
         const txnId = 'TXN-' + crypto.randomBytes(4).toString('hex').toUpperCase();
         await db.collection('transactions').doc(txnId).set({
-            id: txnId, order_id: id, razorpay_order_id: 'DIRECT_UPI', razorpay_payment_id: utr, razorpay_signature: 'MANUAL_VERIFICATION', payment_method: paymentMethod || 'Direct UPI', amount: order.total_amount, status: 'PENDING_VERIFICATION', created_at: new Date().toISOString()
+            id: txnId, 
+            order_id: id, 
+            razorpay_order_id: 'DIRECT_UPI', 
+            razorpay_payment_id: String(utr).trim(), 
+            razorpay_signature: 'MANUAL_VERIFICATION_PENDING', 
+            payment_method: paymentMethod || 'Direct UPI', 
+            amount: order.total_amount, 
+            status: 'PENDING_VERIFICATION', 
+            created_at: new Date().toISOString()
         });
 
-        // Update Order status to PROCESSING so admin can review
-        await db.collection('orders').doc(id).update({ status: 'PROCESSING' });
+        // Set Order status to PENDING_VERIFICATION (Requires Admin Approval before marking PAID / generating Bill)
+        await db.collection('orders').doc(id).update({ 
+            status: 'PENDING_VERIFICATION',
+            utr: String(utr).trim(),
+            payment_method: paymentMethod || 'Direct UPI',
+            utr_submitted_at: new Date().toISOString()
+        });
 
-        const updatedOrderDoc = await db.collection('orders').doc(id).get();
-        const updatedOrder = { id: updatedOrderDoc.id, ...updatedOrderDoc.data() };
-
-        // Fetch user email to send bill
-        if (order.user_id && !order.user_id.startsWith('GUEST-')) {
-            const userDoc = await db.collection('users').doc(order.user_id).get();
-            if (userDoc.exists && userDoc.data().email) {
-                await sendOrderBillEmail(updatedOrder, userDoc.data().email);
-            }
-        }
-
-        // Also send WhatsApp Bill if mobile is available
-        if (order.shipping_mobile) {
-            await sendWhatsAppBill(updatedOrder, order.shipping_mobile);
-        }
-
-        res.json({ success: true, message: 'UTR submitted for verification.' });
+        res.json({ 
+            success: true, 
+            status: 'PENDING_VERIFICATION',
+            message: 'UTR reference submitted successfully. Order is pending admin payment verification.' 
+        });
     } catch (err) {
         console.error('[Submit UTR Error]:', err);
         res.status(500).json({ success: false, error: 'Failed to submit UTR.' });
@@ -1259,30 +1463,32 @@ app.post('/api/payment/razorpay/create-order', async (req, res) => {
         }
         const order = { id: orderDoc.id, ...orderDoc.data() };
 
-        const amountPaise = order.total_amount * 100;
-        const rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_demo';
+        const amountPaise = Math.round(order.total_amount * 100);
+        const rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_TOk3EEZaStpxe9';
+        const rzpKeySecret = process.env.RAZORPAY_KEY_SECRET || 'MVnpUGCcb74FITZs4iXfWlZu';
 
-        // Official Razorpay SDK integration (Or fallback mock for test mode)
-        let rzpOrderId = 'rzp_ord_' + crypto.randomBytes(6).toString('hex');
-        
-        if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_KEY_SECRET !== 'YOUR_RAZORPAY_SECRET_HERE') {
-            try {
-                const Razorpay = require('razorpay');
-                const razorpay = new Razorpay({
-                    key_id: process.env.RAZORPAY_KEY_ID,
-                    key_secret: process.env.RAZORPAY_KEY_SECRET
-                });
+        if (!rzpKeyId || !rzpKeySecret || rzpKeySecret === 'YOUR_RAZORPAY_SECRET_HERE') {
+            return res.status(500).json({ success: false, error: 'Razorpay API credentials not configured properly in server environment.' });
+        }
 
-                const rzpOrder = await razorpay.orders.create({
-                    amount: amountPaise,
-                    currency: 'INR',
-                    receipt: order.id,
-                    notes: { orderId: order.id, customerMobile: order.shipping_mobile }
-                });
-                rzpOrderId = rzpOrder.id;
-            } catch (rzpErr) {
-                console.error('[Razorpay SDK Warning]:', rzpErr.message);
-            }
+        let rzpOrderId = null;
+        try {
+            const razorpay = new Razorpay({
+                key_id: rzpKeyId,
+                key_secret: rzpKeySecret
+            });
+
+            const rzpOrder = await razorpay.orders.create({
+                amount: amountPaise,
+                currency: 'INR',
+                receipt: order.id,
+                notes: { orderId: order.id, customerMobile: order.shipping_mobile || '' }
+            });
+            rzpOrderId = rzpOrder.id;
+        } catch (rzpErr) {
+            console.error('[Razorpay Order Creation Error]:', rzpErr);
+            const errMsg = (rzpErr && rzpErr.error && rzpErr.error.description) ? rzpErr.error.description : (rzpErr.message || 'Razorpay order creation failed.');
+            return res.status(400).json({ success: false, error: errMsg });
         }
 
         res.json({
@@ -1296,7 +1502,7 @@ app.post('/api/payment/razorpay/create-order', async (req, res) => {
             customerMobile: order.shipping_mobile
         });
     } catch (err) {
-        console.error('[Razorpay Create Order Error]:', err);
+        console.error('[Razorpay Create Order Server Error]:', err);
         res.status(500).json({ success: false, error: 'Failed to create payment order.' });
     }
 });
@@ -1305,17 +1511,33 @@ app.post('/api/payment/razorpay/create-order', async (req, res) => {
 app.post('/api/payment/razorpay/verify', async (req, res) => {
     try {
         const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
-        const rzpSecret = process.env.RAZORPAY_KEY_SECRET;
+        const rzpSecret = process.env.RAZORPAY_KEY_SECRET || 'MVnpUGCcb74FITZs4iXfWlZu';
 
-        let isValid = true;
+        if (!orderId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+            return res.status(400).json({ success: false, error: 'Missing required payment response details.' });
+        }
 
-        if (rzpSecret && rzpSecret !== 'YOUR_RAZORPAY_SECRET_HERE' && razorpaySignature) {
+        const orderRef = db.collection('orders').doc(orderId);
+        const orderDoc = await orderRef.get();
+        if (!orderDoc.exists) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+        const orderData = orderDoc.data();
+
+        // Verify Razorpay Order ID matches if stored
+        if (orderData.razorpay_order_id && orderData.razorpay_order_id !== razorpayOrderId) {
+            return res.status(400).json({ success: false, error: 'Payment order ID mismatch.' });
+        }
+
+        let isValid = false;
+
+        if (rzpSecret && rzpSecret !== 'YOUR_RAZORPAY_SECRET_HERE') {
             const generatedSignature = crypto
                 .createHmac('sha256', rzpSecret)
                 .update(`${razorpayOrderId}|${razorpayPaymentId}`)
                 .digest('hex');
 
-            isValid = generatedSignature === razorpaySignature;
+            isValid = (generatedSignature === razorpaySignature);
         }
 
         if (!isValid) {
@@ -1324,12 +1546,20 @@ app.post('/api/payment/razorpay/verify', async (req, res) => {
 
         // Update Order to PAID in Database
         const trackingNo = 'PENDING';
-        await db.collection('orders').doc(orderId).update({ status: 'PAID', tracking_number: trackingNo });
+        const now = new Date().toISOString();
+        await orderRef.update({ 
+            status: 'PAID', 
+            tracking_number: trackingNo,
+            razorpay_payment_id: razorpayPaymentId,
+            razorpay_order_id: razorpayOrderId,
+            razorpay_signature: razorpaySignature,
+            paid_at: now
+        });
 
         // Insert Transaction Record
         const txnId = 'TXN-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-        const orderDoc = await db.collection('orders').doc(orderId).get();
-        const order = { id: orderDoc.id, ...orderDoc.data() };
+        const updatedOrderDoc = await orderRef.get();
+        const order = { id: updatedOrderDoc.id, ...updatedOrderDoc.data() };
         
         await db.collection('transactions').doc(txnId).set({
             id: txnId, order_id: orderId, razorpay_order_id: razorpayOrderId || '', razorpay_payment_id: razorpayPaymentId || '', razorpay_signature: razorpaySignature || '', payment_method: order.payment_method || 'Razorpay', amount: order.total_amount, status: 'SUCCESS', created_at: new Date().toISOString()
@@ -1337,15 +1567,23 @@ app.post('/api/payment/razorpay/verify', async (req, res) => {
 
         // Fetch user email to send bill
         if (order.user_id && !order.user_id.startsWith('GUEST-')) {
-            const userDoc = await db.collection('users').doc(order.user_id).get();
-            if (userDoc.exists && userDoc.data().email) {
-                await sendOrderBillEmail(order, userDoc.data().email);
+            try {
+                const userDoc = await db.collection('users').doc(order.user_id).get();
+                if (userDoc.exists && userDoc.data().email) {
+                    await sendOrderBillEmail(order, userDoc.data().email);
+                }
+            } catch (emailErr) {
+                console.error('[Send Bill Email Error]:', emailErr);
             }
         }
 
         // Also send WhatsApp Bill if mobile is available
         if (order.shipping_mobile) {
-            await sendWhatsAppBill(order, order.shipping_mobile);
+            try {
+                await sendWhatsAppBill(order, order.shipping_mobile);
+            } catch (waErr) {
+                console.error('[Send WhatsApp Bill Error]:', waErr);
+            }
         }
 
         res.json({
@@ -1578,12 +1816,14 @@ app.get('/api/admin/stats', async (req, res) => {
     try {
         // Since we can't easily do aggregations in Firestore client without fetching, we fetch and aggregate
         const ordersSnap = await db.collection('orders').get();
-        let totalRevenue = 0, totalOrders = ordersSnap.size, pendingShipping = 0, totalBooks = 0;
+        let totalRevenue = 0, confirmedOrdersCount = 0, pendingShipping = 0, totalBooks = 0;
         ordersSnap.forEach(doc => {
             const data = doc.data();
-            if (data.status !== 'CANCELLED') {
+            const isConfirmedPaid = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(data.status);
+            if (isConfirmedPaid) {
                 totalRevenue += data.total_amount || 0;
                 totalBooks += data.quantity || 0;
+                confirmedOrdersCount++;
             }
             if (['PAID', 'PROCESSING'].includes(data.status)) {
                 pendingShipping++;
@@ -1597,7 +1837,7 @@ app.get('/api/admin/stats', async (req, res) => {
             success: true,
             stats: {
                 totalRevenue: totalRevenue,
-                totalOrders: totalOrders,
+                totalOrders: confirmedOrdersCount,
                 totalUsers: totalUsers,
                 pendingShipping: pendingShipping,
                 totalBooksSold: totalBooks
@@ -1608,12 +1848,26 @@ app.get('/api/admin/stats', async (req, res) => {
     }
 });
 
-// Admin Get All Orders with Advanced Search & Date Range Filtering
+// Admin Get All Orders with Advanced Search & Date Range Filtering (Excludes Unpaid Abandoned Checkouts by Default)
 app.get('/api/admin/orders', async (req, res) => {
     try {
         const { search, startDate, endDate, status } = req.query;
         const snapshot = await db.collection('orders').get();
         let orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const VALID_ADMIN_STATUSES = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED', 'PENDING_VERIFICATION'];
+
+        // Filter by Status
+        if (!status || status === 'ALL') {
+            // Default: Only show verified paid orders or orders awaiting payment verification
+            orders = orders.filter(o => VALID_ADMIN_STATUSES.includes(o.status));
+        } else if (status === 'UNPAID_ABANDONED') {
+            // Show abandoned checkouts (PENDING / CANCELLED)
+            orders = orders.filter(o => o.status === 'PENDING' || o.status === 'CANCELLED');
+        } else {
+            // Filter by specific status requested
+            orders = orders.filter(o => o.status === status);
+        }
 
         if (search && search.trim()) {
             const term = search.trim().toLowerCase();
@@ -1622,10 +1876,6 @@ app.get('/api/admin/orders', async (req, res) => {
                 (o.shipping_name && o.shipping_name.toLowerCase().includes(term)) || 
                 (o.shipping_mobile && o.shipping_mobile.includes(term))
             );
-        }
-
-        if (status && status !== 'ALL') {
-            orders = orders.filter(o => o.status === status);
         }
 
         if (startDate) {
@@ -1667,34 +1917,7 @@ app.get('/api/admin/orders', async (req, res) => {
     }
 });
 
-// Admin Get Users Data
-app.get('/api/admin/users', authenticateUser, async (req, res) => {
-    try {
-        const usersSnapshot = await db.collection('users').orderBy('created_at', 'desc').get();
-        const users = [];
-        
-        usersSnapshot.forEach(doc => {
-            const data = doc.data();
-            users.push({
-                id: doc.id,
-                name: data.name || '',
-                email: data.email || '',
-                mobile: data.mobile || '',
-                city: data.city || '',
-                pincode: data.pincode || '',
-                address: data.address || '',
-                created_at: data.created_at || '',
-                is_blocked: data.is_blocked || 0,
-                account_status: data.account_status || 'active'
-            });
-        });
 
-        res.json({ success: true, users });
-    } catch (err) {
-        console.error('[Admin Users API Error]:', err);
-        res.status(500).json({ success: false, error: 'Failed to fetch users.' });
-    }
-});
 
 // Admin Update Order Status & Tracking Number
 app.put('/api/admin/orders/:id/status', async (req, res) => {
@@ -1741,32 +1964,100 @@ app.put('/api/admin/orders/:id/ship', async (req, res) => {
 });
 
 // Admin Get All Users
-app.get('/api/admin/users', async (req, res) => {
+const getUsersHandler = async (req, res) => {
     try {
         const snapshot = await db.collection('users').get();
-        let users = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        users.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        let rawUsers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
         const ordersSnap = await db.collection('orders').get();
-        const allOrders = ordersSnap.docs.map(d => d.data());
+        const allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        for (const u of users) {
-            const userOrders = allOrders.filter(o => o.user_id === u.id && !['CANCELLED', 'PENDING'].includes(o.status));
-            u.total_orders = userOrders.length;
-            u.total_spent = userOrders.reduce((acc, o) => acc + (o.total_amount || 0), 0);
-        }
-        
-        // Return all registered users, regardless of order history
-        
+        const users = rawUsers.map(u => {
+            const userMobile = u.mobile || u.phone || u.shipping_mobile || '';
+            const userId = u.id || '';
+
+            // Match orders by user_id or mobile number
+            const userOrders = allOrders.filter(o => 
+                !['CANCELLED', 'PENDING'].includes(o.status) && (
+                    (userId && o.user_id === userId) || 
+                    (userMobile && (o.user_id === userMobile || o.shipping_mobile === userMobile))
+                )
+            );
+
+            return {
+                ...u,
+                id: userId,
+                name: u.name || u.fullName || u.displayName || 'Customer',
+                mobile: userMobile,
+                email: u.email || 'N/A',
+                address: u.address || u.shipping_address || 'N/A',
+                city: u.city || u.shipping_city || '',
+                pincode: u.pincode || u.shipping_pincode || '',
+                created_at: u.created_at || u.createdAt || new Date().toISOString(),
+                total_orders: userOrders.length,
+                total_spent: userOrders.reduce((acc, o) => acc + (o.total_amount || 0), 0),
+                is_blocked: u.is_blocked || 0,
+                account_status: u.account_status || 'active'
+            };
+        });
+
+        users.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
         res.json({ success: true, users });
     } catch (err) {
         console.error('[Admin Get Users Error]:', err);
         res.status(500).json({ success: false, error: 'Failed to fetch users.' });
     }
-});
+};
+
+app.get('/api/admin/users', getUsersHandler);
+app.get('/api/users', getUsersHandler);
+
+// Admin Get Single User Details + Order History
+const getUserDetailsHandler = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userDoc = await db.collection('users').doc(id).get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+        const u = { id: userDoc.id, ...userDoc.data() };
+        const userMobile = u.mobile || u.phone || '';
+
+        const ordersSnap = await db.collection('orders').get();
+        const allOrders = ordersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const userOrders = allOrders.filter(o => 
+            (u.id && o.user_id === u.id) || 
+            (userMobile && (o.user_id === userMobile || o.shipping_mobile === userMobile))
+        );
+
+        userOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        res.json({
+            success: true,
+            user: {
+                ...u,
+                name: u.name || u.fullName || u.displayName || 'Customer',
+                mobile: userMobile,
+                email: u.email || 'N/A',
+                address: u.address || u.shipping_address || 'N/A',
+                city: u.city || u.shipping_city || '',
+                pincode: u.pincode || u.shipping_pincode || ''
+            },
+            orders: userOrders
+        });
+    } catch (err) {
+        console.error('[Admin Get User Details Error]:', err);
+        res.status(500).json({ success: false, error: 'Failed to fetch user details.' });
+    }
+};
+
+app.get('/api/admin/users/:id', getUserDetailsHandler);
+app.get('/api/users/:id', getUserDetailsHandler);
 
 // Admin Block / Unblock User
-app.put('/api/admin/users/:id/block', async (req, res) => {
+const blockUserHandler = async (req, res) => {
     try {
         const { id } = req.params;
         const { isBlocked } = req.body;
@@ -1783,7 +2074,25 @@ app.put('/api/admin/users/:id/block', async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, error: 'Failed to update user block status.' });
     }
-});
+};
+
+app.put('/api/admin/users/:id/block', blockUserHandler);
+app.put('/api/users/:id/block', blockUserHandler);
+
+// Admin Delete User Endpoint
+const deleteUserHandler = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.collection('users').doc(id).delete();
+        res.json({ success: true, message: 'User deleted successfully.' });
+    } catch (err) {
+        console.error('[Admin Delete User Error]:', err);
+        res.status(500).json({ success: false, error: 'Failed to delete user.' });
+    }
+};
+
+app.delete('/api/admin/users/:id', deleteUserHandler);
+app.delete('/api/users/:id', deleteUserHandler);
 
 // Admin Create Voucher (Standard)
 app.post('/api/admin/vouchers', async (req, res) => {
@@ -1901,6 +2210,56 @@ app.get('/api/admin/vouchers', async (req, res) => {
         res.status(500).json({ success: false, error: 'Failed to fetch vouchers.' });
     }
 });
+
+// GET /api/vouchers alias
+app.get('/api/vouchers', async (req, res) => {
+    try {
+        const snapshot = await db.collection('vouchers').get();
+        let vouchers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        vouchers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        res.json({ success: true, vouchers });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to fetch vouchers.' });
+    }
+});
+
+// Toggle Voucher Active/Inactive Status
+const toggleVoucherStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isActive } = req.body;
+
+        await db.collection('vouchers').doc(id).update({
+            is_active: (isActive === true || isActive === 1) ? 1 : 0
+        });
+
+        res.json({
+            success: true,
+            message: (isActive === true || isActive === 1) ? 'Voucher activated.' : 'Voucher deactivated.'
+        });
+    } catch (err) {
+        console.error('[Toggle Voucher Error]:', err);
+        res.status(500).json({ success: false, error: 'Failed to update voucher status.' });
+    }
+};
+
+app.put('/api/admin/vouchers/:id/status', toggleVoucherStatus);
+app.put('/api/vouchers/:id/status', toggleVoucherStatus);
+
+// Delete Voucher
+const deleteVoucher = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.collection('vouchers').doc(id).delete();
+        res.json({ success: true, message: 'Voucher deleted successfully.' });
+    } catch (err) {
+        console.error('[Delete Voucher Error]:', err);
+        res.status(500).json({ success: false, error: 'Failed to delete voucher.' });
+    }
+};
+
+app.delete('/api/admin/vouchers/:id', deleteVoucher);
+app.delete('/api/vouchers/:id', deleteVoucher);
 
 // Delete Account Endpoint (Soft Delete)
 app.delete('/api/account/delete', authenticateUser, async (req, res) => {

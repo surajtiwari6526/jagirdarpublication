@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - Jagirdar Publications</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Firebase SDKs for Google Login -->
@@ -46,56 +47,93 @@
         </div>
 
         <div class="px-6 py-8 sm:px-10">
-            <form id="signup-form" class="space-y-5">
+            <form id="signup-form" class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="firstName" class="mb-1 block text-sm font-semibold text-brand-900">First Name <span class="text-red-500">*</span></label>
-                        <input id="firstName" name="firstName" type="text" placeholder="First Name" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
+                        <label for="firstName" class="mb-1 block text-xs font-semibold text-brand-900">First Name <span class="text-red-500">*</span></label>
+                        <input id="firstName" name="firstName" type="text" placeholder="First Name" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
                     </div>
                     <div>
-                        <label for="lastName" class="mb-1 block text-sm font-semibold text-brand-900">Last Name</label>
-                        <input id="lastName" name="lastName" type="text" placeholder="Last Name" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200">
+                        <label for="lastName" class="mb-1 block text-xs font-semibold text-brand-900">Last Name</label>
+                        <input id="lastName" name="lastName" type="text" placeholder="Last Name" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200">
                     </div>
                 </div>
 
                 <div>
-                    <label for="email" class="mb-1 block text-sm font-semibold text-brand-900">Email Address <span class="text-red-500">*</span></label>
-                    <input id="email" name="email" type="email" placeholder="Email Address" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
+                    <label for="password" class="mb-1 block text-xs font-semibold text-brand-900">Password <span class="text-red-500">*</span></label>
+                    <input id="password" name="password" type="password" placeholder="Create a strong password (min 6 chars)" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required minlength="6">
                 </div>
 
-                <div>
-                    <label for="mobile" class="mb-1 block text-sm font-semibold text-brand-900">Mobile Number <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 font-semibold text-gray-500">+91</span>
-                        <input id="mobile" name="mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" class="w-full rounded-xl border border-gray-200 bg-gray-50 pl-12 pr-4 py-2.5 text-sm tracking-wider outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
-                    </div>
-                </div>
-
-                <div>
-                    <label for="password" class="mb-1 block text-sm font-semibold text-brand-900">Password <span class="text-red-500">*</span></label>
-                    <input id="password" name="password" type="password" placeholder="Create a strong password" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
-                </div>
-
-                <button id="send-otp-btn" type="button" class="w-full rounded-xl bg-brand-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-900 shadow-md">
-                    Verify Mobile & Sign Up
-                </button>
-
-                <div id="otp-section" class="hidden pt-4 border-t border-gray-100">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label for="otp" class="mb-2 block text-xs font-semibold text-brand-800 text-center">Mobile OTP</label>
-                            <input id="otp" name="otp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="------" class="w-full rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-center text-xl font-bold tracking-[0.3em] outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
-                        </div>
-                        <div>
-                            <label for="email-otp" class="mb-2 block text-xs font-semibold text-brand-800 text-center">Email OTP</label>
-                            <input id="email-otp" name="email-otp" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="------" class="w-full rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-center text-xl font-bold tracking-[0.3em] outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
-                        </div>
+                <!-- Step 1: Mobile Verification Section -->
+                <div class="rounded-2xl border border-brand-100 p-3.5 bg-brand-50/40 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label for="mobile" class="text-xs font-bold text-brand-900">1. Mobile Number <span class="text-red-500">*</span></label>
+                        <span id="mobile-badge" class="hidden text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">✓ Verified</span>
                     </div>
                     
-                    <button id="verify-btn" type="submit" class="mt-4 w-full rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700 shadow-md">
-                        Complete Sign Up
-                    </button>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-semibold text-gray-500">+91</span>
+                            <input id="mobile" name="mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" class="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-2 text-xs tracking-wider outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200" required>
+                        </div>
+                        <button id="send-mobile-otp-btn" type="button" class="rounded-xl bg-brand-800 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-brand-900 shrink-0">
+                            Send OTP
+                        </button>
+                    </div>
+
+                    <!-- Mobile OTP Box -->
+                    <div id="mobile-otp-box" class="hidden pt-2 space-y-2 border-t border-brand-100">
+                        <label class="block text-[11px] font-semibold text-brand-800">Enter 6-Digit Mobile OTP</label>
+                        <div class="flex gap-2">
+                            <input id="mobile-otp" type="text" inputmode="numeric" maxlength="6" placeholder="------" class="w-full rounded-xl border border-brand-300 bg-white px-3 py-1.5 text-center text-sm font-bold tracking-[0.2em] outline-none focus:border-brand-500">
+                            <button id="verify-mobile-otp-btn" type="button" class="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 shrink-0">
+                                Verify Mobile OTP
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center text-[11px]">
+                            <span id="mobile-timer-text" class="text-gray-500">Resend in <b id="mobile-timer-cnt">60</b>s</span>
+                            <button id="resend-mobile-otp-btn" type="button" class="font-bold text-brand-700 hover:underline disabled:opacity-40 disabled:no-underline" disabled>
+                                Resend Mobile OTP
+                            </button>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Step 2: Email Verification Section -->
+                <div class="rounded-2xl border border-brand-100 p-3.5 bg-brand-50/40 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <label for="email" class="text-xs font-bold text-brand-900">2. Email Address <span class="text-red-500">*</span></label>
+                        <span id="email-badge" class="hidden text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">✓ Verified</span>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <input id="email" name="email" type="email" placeholder="Email Address" class="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-xs outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200" required>
+                        <button id="send-email-otp-btn" type="button" class="rounded-xl bg-brand-800 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-brand-900 shrink-0">
+                            Send OTP
+                        </button>
+                    </div>
+
+                    <!-- Email OTP Box -->
+                    <div id="email-otp-box" class="hidden pt-2 space-y-2 border-t border-brand-100">
+                        <label class="block text-[11px] font-semibold text-brand-800">Enter 6-Digit Email OTP</label>
+                        <div class="flex gap-2">
+                            <input id="email-otp" type="text" inputmode="numeric" maxlength="6" placeholder="------" class="w-full rounded-xl border border-brand-300 bg-white px-3 py-1.5 text-center text-sm font-bold tracking-[0.2em] outline-none focus:border-brand-500">
+                            <button id="verify-email-otp-btn" type="button" class="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 shrink-0">
+                                Verify Email OTP
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center text-[11px]">
+                            <span id="email-timer-text" class="text-gray-500">Resend in <b id="email-timer-cnt">60</b>s</span>
+                            <button id="resend-email-otp-btn" type="button" class="font-bold text-brand-700 hover:underline disabled:opacity-40 disabled:no-underline" disabled>
+                                Resend Email OTP
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="complete-signup-btn" type="submit" class="w-full rounded-xl bg-brand-800 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-900 shadow-md">
+                    Complete Sign Up
+                </button>
             </form>
 
             <div class="mt-6 flex items-center justify-center space-x-4">
@@ -192,107 +230,231 @@
         const emailInput = document.getElementById('email');
         const mobileInput = document.getElementById('mobile');
         const passwordInput = document.getElementById('password');
-        const otpInput = document.getElementById('otp');
-        const otpSection = document.getElementById('otp-section');
-        const sendOtpBtn = document.getElementById('send-otp-btn');
-        const verifyBtn = document.getElementById('verify-btn');
         const googleSignupBtn = document.getElementById('google-signup-btn');
         const statusMessage = document.getElementById('status-message');
 
         const API_BASE = 'https://jagirdar.vercel.app/api/auth';
-        let otpSent = false;
-        let countdownInterval = null;
+        
+        let isMobileVerified = false;
+        let isEmailVerified = false;
+        let mobileTimer = null;
+        let emailTimer = null;
 
         const showStatus = (message, type = 'info') => {
             statusMessage.textContent = message;
-            statusMessage.className = `mt-4 text-center text-sm font-semibold ${
+            statusMessage.className = `mt-4 text-center text-xs font-bold ${
                 type === 'error' ? 'text-red-600' : type === 'success' ? 'text-emerald-600' : 'text-brand-700'
             }`;
         };
 
-        const startResendTimer = (seconds = 90) => {
-            let timeLeft = seconds;
-            sendOtpBtn.disabled = true;
-            sendOtpBtn.classList.replace('bg-brand-800', 'bg-brand-600');
-            sendOtpBtn.classList.add('cursor-not-allowed', 'opacity-70');
+        // Mobile Timer Function
+        const startMobileTimer = (seconds = 60) => {
+            let left = seconds;
+            const btn = document.getElementById('resend-mobile-otp-btn');
+            const txt = document.getElementById('mobile-timer-cnt');
+            btn.disabled = true;
+            if (mobileTimer) clearInterval(mobileTimer);
 
-            if (countdownInterval) clearInterval(countdownInterval);
-
-            countdownInterval = setInterval(() => {
-                if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
-                    sendOtpBtn.disabled = false;
-                    sendOtpBtn.textContent = 'Resend OTP';
-                    sendOtpBtn.classList.replace('bg-brand-600', 'bg-brand-800');
-                    sendOtpBtn.classList.remove('cursor-not-allowed', 'opacity-70');
-                } else {
-                    sendOtpBtn.textContent = `Resend OTP in ${timeLeft}s`;
-                    timeLeft--;
+            mobileTimer = setInterval(() => {
+                left--;
+                txt.textContent = left;
+                if (left <= 0) {
+                    clearInterval(mobileTimer);
+                    btn.disabled = false;
+                    document.getElementById('mobile-timer-text').textContent = 'Didn\'t receive OTP?';
                 }
             }, 1000);
         };
 
-        sendOtpBtn.addEventListener('click', async () => {
+        // Email Timer Function
+        const startEmailTimer = (seconds = 60) => {
+            let left = seconds;
+            const btn = document.getElementById('resend-email-otp-btn');
+            const txt = document.getElementById('email-timer-cnt');
+            btn.disabled = true;
+            if (emailTimer) clearInterval(emailTimer);
+
+            emailTimer = setInterval(() => {
+                left--;
+                txt.textContent = left;
+                if (left <= 0) {
+                    clearInterval(emailTimer);
+                    btn.disabled = false;
+                    document.getElementById('email-timer-text').textContent = 'Didn\'t receive OTP?';
+                }
+            }, 1000);
+        };
+
+        // 1. Send Mobile OTP
+        const sendMobileOtp = async () => {
             const mobile = mobileInput.value.trim();
-            const email = emailInput.value.trim();
-            const firstName = firstNameInput.value.trim();
-            const password = passwordInput.value.trim();
+            const cleanMobile = mobile.replace(/\D/g, '').slice(-10);
 
-            if (!firstName || !email || !password) {
-                showStatus('Please fill in all required fields.', 'error');
+            if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+                showStatus('Please enter a valid 10-digit Indian mobile number.', 'error');
                 return;
             }
 
-            if (!/^[6-9]\d{9}$/.test(mobile.replace(/\D/g, '').slice(-10))) {
-                showStatus('Please enter a valid 10-digit mobile number.', 'error');
-                return;
-            }
-
-            sendOtpBtn.disabled = true;
-            sendOtpBtn.textContent = 'Sending OTP...';
-            showStatus('Sending verification OTP...');
+            const sendBtn = document.getElementById('send-mobile-otp-btn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+            showStatus('Sending Mobile OTP...');
 
             try {
-                const res = await fetch(`${API_BASE}/send-signup-otp`, {
+                const res = await fetch(`${API_BASE}/send-signup-mobile-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mobile, email })
+                    body: JSON.stringify({ mobile: cleanMobile })
                 });
-
                 const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Failed to send Mobile OTP');
 
-                if (!res.ok || !data.success) {
-                    sendOtpBtn.disabled = false;
-                    sendOtpBtn.textContent = 'Verify Mobile & Sign Up';
-                    throw new Error(data.error || 'Failed to send OTP');
-                }
-
-                otpSent = true;
-                otpSection.classList.remove('hidden');
-                
-                // Disable inputs so user doesn't change them during verification
-                firstNameInput.disabled = true;
-                lastNameInput.disabled = true;
-                emailInput.disabled = true;
-                mobileInput.disabled = true;
-                passwordInput.disabled = true;
-
-                otpInput.focus();
-                startResendTimer(90);
-                showStatus(`📲 OTP sent successfully. Please enter the OTP to verify.`, 'success');
-
+                document.getElementById('mobile-otp-box').classList.remove('hidden');
+                document.getElementById('mobile-otp').focus();
+                sendBtn.textContent = 'Sent';
+                sendBtn.classList.replace('bg-brand-800', 'bg-gray-400');
+                startMobileTimer(60);
+                showStatus('📲 Mobile OTP sent successfully.', 'success');
             } catch (err) {
-                sendOtpBtn.disabled = false;
-                sendOtpBtn.textContent = 'Verify Mobile & Sign Up';
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send OTP';
+                showStatus(err.message, 'error');
+            }
+        };
+
+        document.getElementById('send-mobile-otp-btn').addEventListener('click', sendMobileOtp);
+        document.getElementById('resend-mobile-otp-btn').addEventListener('click', async () => {
+            document.getElementById('mobile-timer-text').innerHTML = 'Resend in <b id="mobile-timer-cnt">60</b>s';
+            await sendMobileOtp();
+        });
+
+        // Verify Mobile OTP
+        document.getElementById('verify-mobile-otp-btn').addEventListener('click', async () => {
+            const mobile = mobileInput.value.trim();
+            const otp = document.getElementById('mobile-otp').value.trim();
+
+            if (!otp || otp.length !== 6) {
+                showStatus('Please enter valid 6-digit Mobile OTP.', 'error');
+                return;
+            }
+
+            const verifyBtn = document.getElementById('verify-mobile-otp-btn');
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+
+            try {
+                const res = await fetch(`${API_BASE}/check-signup-mobile-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobile, otp })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Invalid Mobile OTP');
+
+                isMobileVerified = true;
+                document.getElementById('mobile-badge').classList.remove('hidden');
+                document.getElementById('mobile-otp-box').classList.add('hidden');
+                mobileInput.disabled = true;
+                document.getElementById('send-mobile-otp-btn').disabled = true;
+                document.getElementById('send-mobile-otp-btn').textContent = 'Verified';
+                showStatus('✅ Mobile number verified successfully!', 'success');
+            } catch (err) {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify Mobile OTP';
                 showStatus(err.message, 'error');
             }
         });
 
+        // 2. Send Email OTP
+        const sendEmailOtp = async () => {
+            const email = emailInput.value.trim().toLowerCase();
+
+            if (!email || !email.includes('@')) {
+                showStatus('Please enter a valid email address.', 'error');
+                return;
+            }
+
+            const sendBtn = document.getElementById('send-email-otp-btn');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+            showStatus('Sending Email OTP...');
+
+            try {
+                const res = await fetch(`${API_BASE}/send-signup-email-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Failed to send Email OTP');
+
+                document.getElementById('email-otp-box').classList.remove('hidden');
+                document.getElementById('email-otp').focus();
+                sendBtn.textContent = 'Sent';
+                sendBtn.classList.replace('bg-brand-800', 'bg-gray-400');
+                startEmailTimer(60);
+                showStatus('📧 Email OTP sent successfully.', 'success');
+            } catch (err) {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Send OTP';
+                showStatus(err.message, 'error');
+            }
+        };
+
+        document.getElementById('send-email-otp-btn').addEventListener('click', sendEmailOtp);
+        document.getElementById('resend-email-otp-btn').addEventListener('click', async () => {
+            document.getElementById('email-timer-text').innerHTML = 'Resend in <b id="email-timer-cnt">60</b>s';
+            await sendEmailOtp();
+        });
+
+        // Verify Email OTP
+        document.getElementById('verify-email-otp-btn').addEventListener('click', async () => {
+            const email = emailInput.value.trim().toLowerCase();
+            const otp = document.getElementById('email-otp').value.trim();
+
+            if (!otp || otp.length !== 6) {
+                showStatus('Please enter valid 6-digit Email OTP.', 'error');
+                return;
+            }
+
+            const verifyBtn = document.getElementById('verify-email-otp-btn');
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+
+            try {
+                const res = await fetch(`${API_BASE}/check-signup-email-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, otp })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || 'Invalid Email OTP');
+
+                isEmailVerified = true;
+                document.getElementById('email-badge').classList.remove('hidden');
+                document.getElementById('email-otp-box').classList.add('hidden');
+                emailInput.disabled = true;
+                document.getElementById('send-email-otp-btn').disabled = true;
+                document.getElementById('send-email-otp-btn').textContent = 'Verified';
+                showStatus('✅ Email address verified successfully!', 'success');
+            } catch (err) {
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify Email OTP';
+                showStatus(err.message, 'error');
+            }
+        });
+
+        // Final Form Submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            if (!otpSent) {
-                showStatus('Please click to send OTP first.', 'error');
+            if (!isMobileVerified) {
+                showStatus('Please verify your Mobile Number first.', 'error');
+                return;
+            }
+
+            if (!isEmailVerified) {
+                showStatus('Please verify your Email Address first.', 'error');
                 return;
             }
 
@@ -301,36 +463,29 @@
             const firstName = firstNameInput.value.trim();
             const lastName = lastNameInput.value.trim();
             const password = passwordInput.value.trim();
-            const otp = otpInput.value.trim();
-            const emailOtp = document.getElementById('email-otp').value.trim();
 
-            if (!otp || !emailOtp) {
-                showStatus('Please enter both OTPs.', 'error');
-                return;
-            }
-
-            verifyBtn.disabled = true;
-            verifyBtn.textContent = 'Verifying...';
+            const completeBtn = document.getElementById('complete-signup-btn');
+            completeBtn.disabled = true;
+            completeBtn.textContent = 'Creating Account...';
 
             try {
                 const res = await fetch(`${API_BASE}/verify-signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ firstName, lastName, mobile, email, password, otp, emailOtp })
+                    body: JSON.stringify({ firstName, lastName, mobile, email, password })
                 });
 
                 const data = await res.json();
-
-                if (!res.ok || !data.success) {
-                    throw new Error(data.error || 'Signup failed.');
-                }
+                if (!res.ok || !data.success) throw new Error(data.error || 'Signup failed.');
 
                 const params = new URLSearchParams(window.location.search);
                 const redirect = params.get('redirect') || 'index.html';
 
                 sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                localStorage.setItem('bookAuth', JSON.stringify(data.user));
                 if (data.token) {
                     localStorage.setItem('bookAuthToken', data.token);
+                    sessionStorage.setItem('bookAuthToken', data.token);
                 }
 
                 showStatus('🎉 Account Created Successfully! Logging in...', 'success');
@@ -339,8 +494,8 @@
                 }, 1000);
 
             } catch (err) {
-                verifyBtn.disabled = false;
-                verifyBtn.textContent = 'Complete Sign Up';
+                completeBtn.disabled = false;
+                completeBtn.textContent = 'Complete Sign Up';
                 showStatus(err.message, 'error');
             }
         });
@@ -377,7 +532,11 @@
                     const params = new URLSearchParams(window.location.search);
                     const redirect = params.get('redirect') || 'index.html';
                     sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
-                    if (data.token) localStorage.setItem('bookAuthToken', data.token);
+                    localStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    if (data.token) {
+                        localStorage.setItem('bookAuthToken', data.token);
+                        sessionStorage.setItem('bookAuthToken', data.token);
+                    }
 
                     showStatus('✅ Account Created Successfully! Redirecting...', 'success');
                     setTimeout(() => { window.location.href = redirect; }, 800);
@@ -481,7 +640,11 @@
                     const params = new URLSearchParams(window.location.search);
                     const redirect = params.get('redirect') || 'index.html';
                     sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
-                    if (data.token) localStorage.setItem('bookAuthToken', data.token);
+                    localStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    if (data.token) {
+                        localStorage.setItem('bookAuthToken', data.token);
+                        sessionStorage.setItem('bookAuthToken', data.token);
+                    }
 
                     gModal.innerHTML = '<div class="p-6 text-center"><p class="text-emerald-600 font-bold mb-2">✅ Signup Complete!</p><p class="text-xs text-slate-500">Redirecting...</p></div>';
                     setTimeout(() => { window.location.href = redirect; }, 800);
@@ -491,6 +654,14 @@
                     btn.innerHTML = 'Verify & Complete';
                     btn.disabled = false;
                 }
+            }
+        });
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
             }
         });
     </script>

@@ -101,7 +101,7 @@
                 }
             }
 
-            const token = localStorage.getItem('token') || '';
+            const token = localStorage.getItem('token') || localStorage.getItem('bookAuthToken') || '';
 
             const quantity = parseInt(sessionStorage.getItem('bookQuantity') || '1', 10);
             const voucherCode = sessionStorage.getItem('bookAppliedVoucher') || '';
@@ -111,12 +111,13 @@
             const shippingCity = sessionStorage.getItem('shippingCity') || '';
             const shippingPincode = sessionStorage.getItem('shippingPincode') || '';
 
+            const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
             payNowBtn.disabled = true;
             payNowBtn.textContent = 'Processing...';
 
             try {
                 // 1. Create Draft Order
-                const orderRes = await fetch('https://jagirdar.vercel.app/api/orders/create', {
+                const orderRes = await fetch(`${API_BASE}/api/orders/create`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -137,10 +138,8 @@
                 
                 if (!orderData.success) throw new Error(orderData.error || 'Failed to create order');
 
-
-
                 // 2. Create Razorpay Order
-                const rzpRes = await fetch('https://jagirdar.vercel.app/api/payment/razorpay/create-order', {
+                const rzpRes = await fetch(`${API_BASE}/api/payment/razorpay/create-order`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -165,8 +164,8 @@
                             paymentStatusMsg.classList.remove('hidden');
                             paymentStatusMsg.textContent = 'Verifying payment...';
 
-                            // 4. Verify Payment
-                            const verifyRes = await fetch('https://jagirdar.vercel.app/api/payment/razorpay/verify', {
+                            // 4. Verify Payment with backend HMAC signature validation
+                            const verifyRes = await fetch(`${API_BASE}/api/payment/razorpay/verify`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -218,6 +217,14 @@
                 alert(err.message);
                 payNowBtn.disabled = false;
                 payNowBtn.textContent = 'Pay Now';
+            }
+        });
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
             }
         });
     </script>

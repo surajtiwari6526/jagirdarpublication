@@ -76,7 +76,7 @@
         const savedAddressContainer = document.getElementById('saved-address-container');
 
         const getAuth = () => {
-            try { return JSON.parse(sessionStorage.getItem('bookAuth') || 'null'); } 
+            try { return JSON.parse(sessionStorage.getItem('bookAuth') || localStorage.getItem('bookAuth') || 'null'); } 
             catch (e) { return null; }
         };
 
@@ -212,6 +212,14 @@
             setTimeout(() => {
                 window.location.href = 'summary.html';
             }, 600);
+        });
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+            }
         });
     </script>
 </body>

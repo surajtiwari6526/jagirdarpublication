@@ -79,36 +79,91 @@
 
         <!-- Card/Razorpay Success Section -->
         <div id="razorpay-success-section" class="hidden mt-8 text-center">
-            <p class="text-sm text-brand-700 mb-6">Payment verified. You will receive an update once your order is shipped!</p>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-4 text-emerald-800 text-sm font-semibold">
+                <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> Payment verified successfully! Your order is confirmed.
+            </div>
+            <p class="text-sm text-brand-700 mb-6">You will receive tracking updates once your order is shipped!</p>
         </div>
 
-        <div class="mt-8 text-center">
-            <a href="account.html" class="text-sm font-semibold text-brand-800 hover:underline">Go to My Account</a>
+        <!-- Unpaid / Pending Razorpay Payment Warning Section -->
+        <div id="payment-pending-section" class="hidden mt-6 text-center">
+            <div class="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6 text-left">
+                <div class="flex items-center gap-2 text-red-700 font-bold mb-2">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                    <span>Payment Verification Required</span>
+                </div>
+                <p class="text-xs text-red-600 leading-relaxed">
+                    This order is currently <strong>UNPAID</strong>. Your payment was not completed or verified. The order will <strong>NOT be processed or confirmed</strong> until payment is successful.
+                </p>
+            </div>
+
+            <a href="summary.html" class="inline-flex items-center justify-center gap-2 w-full bg-brand-800 text-white py-3.5 px-6 rounded-2xl font-bold hover:bg-brand-900 transition shadow-lg">
+                <i class="fa-solid fa-credit-card"></i>
+                <span>Complete Payment Now</span>
+            </a>
+        </div>
+
+        <div class="mt-8 text-center flex items-center justify-center gap-4">
+            <a href="account.html" class="text-sm font-semibold text-brand-800 hover:underline"><i class="fa-solid fa-user mr-1"></i> Go to My Account</a>
+            <span class="text-brand-300">•</span>
+            <a href="index.html" class="text-sm font-semibold text-brand-800 hover:underline"><i class="fa-solid fa-house mr-1"></i> Back to Home</a>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const params = new URLSearchParams(window.location.search);
             const orderId = params.get('orderId');
-            const amount = params.get('amount');
-            const method = params.get('method');
+            const urlAmount = params.get('amount');
+            const urlMethod = params.get('method');
 
             if (!orderId) {
                 window.location.href = 'index.html';
                 return;
             }
 
-            document.getElementById('display-order-id').textContent = orderId;
-            document.getElementById('display-amount').textContent = `₹${amount || 0}`;
-            document.getElementById('display-method').textContent = method || 'Direct';
+            const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
 
-            if (method && (method.includes('Google Pay') || method.includes('PhonePe'))) {
-                // Direct UPI Flow
+            document.getElementById('display-order-id').textContent = orderId;
+            document.getElementById('display-amount').textContent = `₹${urlAmount || 0}`;
+            document.getElementById('display-method').textContent = urlMethod || 'Online Payment';
+
+            // Verify status from Backend API
+            let orderStatusData = null;
+            try {
+                const res = await fetch(`${API_BASE}/api/orders/${orderId}/status`);
+                const data = await res.json();
+                if (data.success) {
+                    orderStatusData = data;
+                }
+            } catch (err) {
+                console.warn('Order status fetch failed, using URL params fallback:', err);
+            }
+
+            const isPaid = orderStatusData ? orderStatusData.isPaid : false;
+            const currentStatus = orderStatusData ? orderStatusData.status : 'PENDING';
+            const method = (orderStatusData && orderStatusData.paymentMethod) ? orderStatusData.paymentMethod : (urlMethod || '');
+
+            if (orderStatusData) {
+                document.getElementById('display-amount').textContent = `₹${orderStatusData.totalAmount || urlAmount || 0}`;
+                document.getElementById('display-method').textContent = method || 'Online Payment';
+            }
+
+            if (isPaid) {
+                // CONFIRMED & PAID ORDER
+                document.getElementById('status-icon').className = 'mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-3xl mb-4';
+                document.getElementById('status-icon').innerHTML = '<i class="fa-solid fa-check"></i>';
+                document.getElementById('status-title').textContent = 'Order Confirmed & Paid!';
+                document.getElementById('status-desc').innerHTML = `Your payment is verified. Order ID: <span class="font-bold">${orderId}</span>`;
+                document.getElementById('razorpay-success-section').classList.remove('hidden');
+
+            } else if (method && (method.includes('Google Pay') || method.includes('PhonePe'))) {
+                // DIRECT UPI FLOW
                 document.getElementById('direct-upi-section').classList.remove('hidden');
                 document.getElementById('status-icon').className = 'mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-3xl mb-4';
                 document.getElementById('status-icon').innerHTML = '<i class="fa-solid fa-hourglass-half"></i>';
-                document.getElementById('status-title').textContent = 'Awaiting Payment';
+                document.getElementById('status-title').textContent = 'Awaiting Payment Verification';
+                document.getElementById('status-desc').innerHTML = `Order ID: <span class="font-bold">${orderId}</span>. Please complete payment & submit UTR.`;
 
                 let upiId = '';
                 let appName = 'UPI App';
@@ -126,61 +181,74 @@
                 document.getElementById('display-upi-id').textContent = upiId;
                 document.getElementById('upi-btn-text').textContent = `Pay via ${appName}`;
 
-                const upiIntentStr = `${scheme}?pa=${upiId}&pn=Jagirdar%20Publications&am=${amount}&cu=INR`;
+                const amountVal = orderStatusData ? orderStatusData.totalAmount : (urlAmount || 0);
+                const upiIntentStr = `${scheme}?pa=${upiId}&pn=Jagirdar%20Publications&am=${amountVal}&cu=INR`;
                 document.getElementById('upi-intent-btn').href = upiIntentStr;
-                
-                // Generate QR using public API
                 document.getElementById('upi-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiIntentStr)}`;
 
             } else {
-                // Razorpay Success Flow
-                document.getElementById('razorpay-success-section').classList.remove('hidden');
+                // UNPAID / PENDING PAYMENT
+                document.getElementById('status-icon').className = 'mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 text-3xl mb-4';
+                document.getElementById('status-icon').innerHTML = '<i class="fa-solid fa-exclamation"></i>';
+                document.getElementById('status-title').textContent = 'Payment Not Completed';
+                document.getElementById('status-desc').innerHTML = `Order ID: <span class="font-bold">${orderId}</span> is pending payment completion.`;
+                document.getElementById('payment-pending-section').classList.remove('hidden');
             }
 
             // UTR Submission
-            document.getElementById('submit-utr-btn').addEventListener('click', async () => {
-                const utr = document.getElementById('utr-input').value.trim();
-                const msgEl = document.getElementById('utr-msg');
-                msgEl.classList.remove('hidden');
+            const submitUtrBtn = document.getElementById('submit-utr-btn');
+            if (submitUtrBtn) {
+                submitUtrBtn.addEventListener('click', async () => {
+                    const utr = document.getElementById('utr-input').value.trim();
+                    const msgEl = document.getElementById('utr-msg');
+                    msgEl.classList.remove('hidden');
 
-                if (utr.length < 8) {
-                    msgEl.textContent = 'Please enter a valid UTR / Reference number.';
-                    msgEl.className = 'text-xs font-semibold mt-2 text-left text-red-600';
-                    return;
-                }
-
-                const token = localStorage.getItem('token') || '';
-
-                try {
-                    const btn = document.getElementById('submit-utr-btn');
-                    btn.disabled = true;
-                    btn.textContent = 'Submitting...';
-
-                    const res = await fetch(`https://jagirdar.vercel.app/api/orders/${orderId}/utr`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ utr, paymentMethod: method })
-                    });
-
-                    const data = await res.json();
-                    if (data.success) {
-                        msgEl.textContent = '🎉 UTR submitted successfully! We will verify it shortly.';
-                        msgEl.className = 'text-xs font-semibold mt-2 text-left text-emerald-600';
-                        document.getElementById('utr-input').disabled = true;
-                        btn.textContent = 'Submitted';
-                    } else {
-                        throw new Error(data.error || 'Failed to submit UTR');
+                    if (utr.length < 8) {
+                        msgEl.textContent = 'Please enter a valid UTR / Reference number.';
+                        msgEl.className = 'text-xs font-semibold mt-2 text-left text-red-600';
+                        return;
                     }
-                } catch (err) {
-                    msgEl.textContent = err.message;
-                    msgEl.className = 'text-xs font-semibold mt-2 text-left text-red-600';
-                    document.getElementById('submit-utr-btn').disabled = false;
-                    document.getElementById('submit-utr-btn').textContent = 'Submit';
-                }
-            });
+
+                    const token = localStorage.getItem('token') || localStorage.getItem('bookAuthToken') || '';
+
+                    try {
+                        submitUtrBtn.disabled = true;
+                        submitUtrBtn.textContent = 'Submitting...';
+
+                        const res = await fetch(`${API_BASE}/api/orders/${orderId}/utr`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ utr, paymentMethod: method })
+                        });
+
+                        const data = await res.json();
+                        if (data.success) {
+                            msgEl.textContent = '🎉 UTR submitted successfully! We will verify it shortly.';
+                            msgEl.className = 'text-xs font-semibold mt-2 text-left text-emerald-600';
+                            document.getElementById('utr-input').disabled = true;
+                            submitUtrBtn.textContent = 'Submitted';
+                        } else {
+                            throw new Error(data.error || 'Failed to submit UTR');
+                        }
+                    } catch (err) {
+                        msgEl.textContent = err.message;
+                        msgEl.className = 'text-xs font-semibold mt-2 text-left text-red-600';
+                        submitUtrBtn.disabled = false;
+                        submitUtrBtn.textContent = 'Submit';
+                    }
+                });
+            }
+        });
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+            }
         });
     </script>
 </body>

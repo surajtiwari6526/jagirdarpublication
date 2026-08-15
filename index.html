@@ -1,24 +1,29 @@
 <!DOCTYPE html>
 <html lang="hi" translate="no" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <meta name="google" content="notranslate">
     <title>ब्रह्मांशावतार श्री खेतेश्वर दाता | Jagirdar Publications</title>
-    <meta name="description" content="ब्रह्मर्षि श्री खेतारामजी महाराज के दिव्य जीवन एवं चमत्कारों का शोधपरक ग्रंथ। प्रीमियम हार्डकवर (Hardcover) संस्करण।">
+    <meta name="description"
+        content="ब्रह्मर्षि श्री खेतारामजी महाराज के दिव्य जीवन एवं चमत्कारों का शोधपरक ग्रंथ। प्रीमियम हार्डकवर (Hardcover) संस्करण।">
     <meta name="theme-color" content="#7A1F1F">
-    
+
     <!-- Open Graph / Social -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="ब्रह्मांशावतार श्री खेतेश्वर दाता">
-    <meta property="og:description" content="ब्रह्मर्षि श्री खेतारामजी महाराज के दिव्य जीवन एवं चमत्कारों का शोधपरक ग्रंथ।">
+    <meta property="og:description"
+        content="ब्रह्मर्षि श्री खेतारामजी महाराज के दिव्य जीवन एवं चमत्कारों का शोधपरक ग्रंथ।">
     <meta property="og:image" content="https://jagirdarpublication.in/images/cover1.png">
     <meta property="og:url" content="https://jagirdarpublication.in/">
 
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -49,18 +54,36 @@
     </script>
 
     <style>
-        body { -webkit-font-smoothing: antialiased; }
-        
+        body {
+            -webkit-font-smoothing: antialiased;
+        }
+
         /* 3D Book Flip Effect */
-        .perspective-1500 { perspective: 1500px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
-        .is-flipped { transform: rotateY(-180deg); }
-        
-        .book-wrapper { 
-            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.15); 
-            transform-origin: center center; /* Fixed: Prevents swinging off-screen on mobile */
+        .perspective-1500 {
+            perspective: 1500px;
+        }
+
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        .is-flipped {
+            transform: rotateY(-180deg);
+        }
+
+        .book-wrapper {
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.15);
+            transform-origin: center center;
+            /* Fixed: Prevents swinging off-screen on mobile */
         }
 
         /* FAQ Accordion Transitions */
@@ -69,48 +92,92 @@
             overflow: hidden;
             transition: max-height 0.4s ease-in-out;
         }
-        .faq-icon { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .faq-item.active .faq-icon { transform: rotate(45deg); }
+
+        .faq-icon {
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .faq-item.active .faq-icon {
+            transform: rotate(45deg);
+        }
 
         /* Carousel Image Transition */
-        .carousel-item { 
-            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease, z-index 0s; 
+        .carousel-item {
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.6s ease, z-index 0s;
             will-change: transform, opacity;
         }
 
         /* Lightbox Transition */
-        #lightbox { transition: opacity 0.3s ease; }
-        #lightbox.hidden { opacity: 0; pointer-events: none; }
-        
+        #lightbox {
+            transition: opacity 0.3s ease;
+        }
+
+        #lightbox.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
         /* Scroll Reveal Animation */
         .reveal-up {
             opacity: 0;
             transform: translateY(40px);
             transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
         .reveal-up.is-visible {
             opacity: 1;
             transform: translateY(0);
         }
-        .delay-100 { transition-delay: 100ms; }
-        .delay-200 { transition-delay: 200ms; }
+
+        .delay-100 {
+            transition-delay: 100ms;
+        }
+
+        .delay-200 {
+            transition-delay: 200ms;
+        }
 
         /* Floating Animation */
         @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-12px); }
-            100% { transform: translateY(0px); }
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-12px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
         }
-        .animate-float { animation: float 6s ease-in-out infinite; }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #fcf9f2; }
-        ::-webkit-scrollbar-thumb { background: #d5a967; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #7A1F1F; }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #fcf9f2;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d5a967;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #7A1F1F;
+        }
 
         /* Modals Default Hidden Class to prevent flicker */
-        .order-now-btn { display: none; }
+        .order-now-btn {
+            display: none;
+        }
     </style>
 
     <!-- Schema Markup -->
@@ -142,43 +209,60 @@
     }
     </script>
 </head>
+
 <body class="bg-brand-50 text-brand-900 font-sans selection:bg-brand-500 selection:text-white" id="home">
 
-    <header id="header" class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-brand-50/80 backdrop-blur-xl border-b border-brand-200/50">
+    <header id="header"
+        class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-brand-50/80 backdrop-blur-xl border-b border-brand-200/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
-                <a href="#home" class="flex-shrink-0 flex items-center gap-3 group" aria-label="Jagirdar Publications Home">
-                    <img src="images/logo.png" alt="Jagirdar Publications" class="h-10 sm:h-12 w-auto object-contain transform group-hover:scale-105 transition-transform" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <a href="#home" class="flex-shrink-0 flex items-center gap-3 group"
+                    aria-label="Jagirdar Publications Home">
+                    <img src="images/logo.png" alt="Jagirdar Publications"
+                        class="h-10 sm:h-12 w-auto object-contain transform group-hover:scale-105 transition-transform"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                     <!-- Fallback Icon if logo.png fails to load -->
-                    <div style="display:none;" class="w-10 h-10 sm:w-12 sm:h-12 bg-brand-800 rounded-xl items-center justify-center text-brand-500 shadow-md">
+                    <div style="display:none;"
+                        class="w-10 h-10 sm:w-12 sm:h-12 bg-brand-800 rounded-xl items-center justify-center text-brand-500 shadow-md">
                         <i class="fa-solid fa-book-open-reader text-xl sm:text-2xl"></i>
                     </div>
                     <!-- Logo Text -->
                     <div class="flex flex-col justify-center mt-1">
-                        <span class="font-serif font-bold text-[22px] sm:text-[26px] text-brand-900 leading-none tracking-wide">Jagirdar</span>
-                        <span class="font-sans font-bold text-[9px] sm:text-[11px] text-brand-500 tracking-[0.18em] uppercase leading-none mt-1">Publications</span>
+                        <span
+                            class="font-serif font-bold text-[22px] sm:text-[26px] text-brand-900 leading-none tracking-wide">Jagirdar</span>
+                        <span
+                            class="font-sans font-bold text-[9px] sm:text-[11px] text-brand-500 tracking-[0.18em] uppercase leading-none mt-1">Publications</span>
                     </div>
                 </a>
 
                 <!-- Desktop Menu -->
                 <nav class="hidden md:flex space-x-8 items-center" aria-label="Main Navigation">
-                    <a href="#about" class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Book</a>
-                    <a href="#authors" class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Authors</a>
-                    <a href="#gallery" class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Gallery</a>
-                    <a href="#faq" class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">FAQ</a>
-                    <a href="#footer" class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Contact Us</a>
+                    <a href="#about"
+                        class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Book</a>
+                    <a href="#authors"
+                        class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Authors</a>
+                    <a href="#gallery"
+                        class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Gallery</a>
+                    <a href="#faq"
+                        class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">FAQ</a>
+                    <a href="#footer"
+                        class="text-sm font-semibold text-brand-900/80 hover:text-brand-500 transition-colors">Contact
+                        Us</a>
                 </nav>
 
                 <!-- CTA & Mobile Toggle -->
-                <div class="flex items-center space-x-3">
-                    <a href="login.html" id="login-nav-link" class="hidden sm:inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full text-brand-900 bg-white border border-brand-200 hover:bg-brand-50 shadow-sm transition-all">
-                        <i class="fa-solid fa-circle-user text-base text-brand-800"></i>
-                        <span>Login</span>
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <a href="login.html" id="login-nav-link"
+                        class="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-full text-brand-900 bg-white border border-brand-200 hover:bg-brand-50 shadow-sm transition-all max-w-[140px] sm:max-w-none">
+                        <i class="fa-solid fa-circle-user text-sm sm:text-base text-brand-800 shrink-0"></i>
+                        <span class="truncate">Login / Signup</span>
                     </a>
-                    
+
                     <!-- Mobile menu button -->
-                    <button type="button" id="mobile-menu-btn" class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-brand-900 hover:text-brand-500 hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500" aria-expanded="false">
+                    <button type="button" id="mobile-menu-btn"
+                        class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-brand-900 hover:text-brand-500 hover:bg-brand-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500"
+                        aria-expanded="false">
                         <span class="sr-only">Open main menu</span>
                         <i class="fa-solid fa-bars text-xl"></i>
                     </button>
@@ -189,13 +273,22 @@
         <!-- Mobile Menu Panel -->
         <div id="mobile-menu" class="hidden md:hidden bg-brand-50 border-b border-brand-200">
             <div class="px-4 pt-2 pb-6 space-y-1 sm:px-3 shadow-inner">
-                <a href="#about" class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Book</a>
-                <a href="#authors" class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Authors</a>
-                <a href="#gallery" class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Gallery</a>
-                <a href="#faq" class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">FAQ</a>
-                <a href="#footer" class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Contact Us</a>
-                <a href="login.html" id="mobile-login-link" class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Login</a>
-                <a href="#" class="auth-required mt-4 block w-full text-center px-3 py-3 rounded-xl text-base font-bold text-white bg-brand-800 shadow-md order-now-btn" data-redirect="order.html">Order from here</a>
+                <a href="#about"
+                    class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Book</a>
+                <a href="#authors"
+                    class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Authors</a>
+                <a href="#gallery"
+                    class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Gallery</a>
+                <a href="#faq"
+                    class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">FAQ</a>
+                <a href="#footer"
+                    class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Contact
+                    Us</a>
+                <a href="login.html" id="mobile-login-link"
+                    class="block px-3 py-3 rounded-md text-base font-semibold text-brand-900 hover:bg-brand-100 mobile-link">Login</a>
+                <a href="#"
+                    class="auth-required mt-4 block w-full text-center px-3 py-3 rounded-xl text-base font-bold text-white bg-brand-800 shadow-md order-now-btn"
+                    data-redirect="order.html">Order Now</a>
             </div>
         </div>
     </header>
@@ -203,78 +296,108 @@
     <main class="pt-20">
         <section class="relative overflow-hidden bg-brand-50 min-h-[90vh] flex items-center">
             <!-- Background Decoration -->
-            <div class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-brand-200/50 blur-3xl opacity-50 pointer-events-none"></div>
-            <div class="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-brand-300/30 blur-3xl opacity-50 pointer-events-none"></div>
+            <div
+                class="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-brand-200/50 blur-3xl opacity-50 pointer-events-none">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-brand-300/30 blur-3xl opacity-50 pointer-events-none">
+            </div>
 
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-12 lg:py-20">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-                    
+
                     <!-- Hero Content (Left) -->
                     <div class="reveal-up order-2 lg:order-1 text-center lg:text-left">
-                        <span class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-brand-200 text-brand-800 mb-6 shadow-sm border border-brand-300/50">
+                        <span
+                            class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-brand-200 text-brand-800 mb-6 shadow-sm border border-brand-300/50">
                             <i class="fa-solid fa-star text-brand-500 mr-2"></i> Premium Hardcover Edition
                         </span>
-                        
-                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-brand-900 leading-tight mb-4">
+
+                        <h1
+                            class="text-4xl sm:text-5xl lg:text-6xl font-serif font-bold text-brand-900 leading-tight mb-4">
                             ब्रह्मांशावतार <br class="hidden sm:block">श्री खेतेश्वर दाता
                         </h1>
-                        
+
                         <p class="text-xl sm:text-2xl text-brand-700 font-serif mb-6">
                             दिव्य चमत्कार एवं जीवन गाथा
                         </p>
-                        
+
                         <p class="text-base sm:text-lg text-brand-900/70 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                            ब्रह्मर्षि श्री खेतारामजी महाराज के दिव्य जीवन, आध्यात्मिक दर्शन, लोककल्याणकारी कार्यों एवं चमत्कारों पर आधारित शोधपरक ग्रंथ।
+                            ब्रह्मर्षि श्री खेतारामजी महाराज के दिव्य जीवन, आध्यात्मिक दर्शन, लोककल्याणकारी कार्यों एवं
+                            चमत्कारों पर आधारित शोधपरक ग्रंथ।
                         </p>
 
                         <!-- Price Box -->
                         <div class="inline-flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-6">
                             <div class="flex items-baseline gap-3">
-                                <span class="text-5xl font-bold text-brand-800">₹399</span>
-                                <span class="text-2xl text-brand-900/40 line-through">₹599</span>
+                                <span id="hero-book-price" class="text-5xl font-bold text-brand-800">₹399</span>
                             </div>
-                            <span class="bg-gradient-to-r from-brand-400 to-brand-500 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md">
+                            <span
+                                class="bg-gradient-to-r from-brand-400 to-brand-500 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-md">
                                 🔥 Pre-Order Launch Offer
                             </span>
                         </div>
-                        
-                        <p class="text-sm font-semibold text-brand-600 mb-8 flex items-center justify-center lg:justify-start gap-2">
-                            <i class="fa-solid fa-truck-fast"></i> 15-20 Days (Pre-order Delivery)
+
+                        <p
+                            class="text-sm font-semibold text-brand-600 mb-8 flex items-center justify-center lg:justify-start gap-2">
+                            <i class="fa-solid fa-truck-fast"></i> 🚚 5–7 दिनों के भीतर पुस्तक आपके पते पर पहुँच जाएगी।
                         </p>
 
                         <!-- CTA Buttons -->
-                        <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                            <button type="button" id="open-wa-modal" class="inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-white bg-[#25D366] hover:bg-[#1ebe57] shadow-lg shadow-[#25D366]/30 transition-all transform hover:-translate-y-1 focus:ring-4 focus:ring-[#25D366]/50">
+                        <div class="flex flex-col sm:flex-row flex-wrap gap-4 justify-center lg:justify-start">
+                            <a href="#"
+                                class="auth-required inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-white bg-brand-800 hover:bg-brand-900 shadow-lg shadow-brand-800/30 transition-all transform hover:-translate-y-1 focus:ring-4 focus:ring-brand-200 order-now-btn"
+                                data-redirect="order.html">
+                                Order Now
+                            </a>
+                            <button type="button" id="open-wa-modal"
+                                class="inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-white bg-[#25D366] hover:bg-[#1ebe57] shadow-lg shadow-[#25D366]/30 transition-all transform hover:-translate-y-1 focus:ring-4 focus:ring-[#25D366]/50">
                                 <i class="fa-brands fa-whatsapp text-xl mr-2.5"></i>
                                 <span>Order from Whatsapp</span>
                             </button>
-                            <a href="#about" class="inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-brand-900 bg-white border border-brand-200 hover:bg-brand-50 shadow-sm transition-all focus:ring-4 focus:ring-brand-200">
+                            <a href="#about"
+                                class="inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-brand-900 bg-white border border-brand-200 hover:bg-brand-50 shadow-sm transition-all focus:ring-4 focus:ring-brand-200">
                                 Explore Book
                             </a>
                         </div>
-                        <p id="website-order-notice" class="text-[11px] sm:text-xs font-semibold text-brand-700/70 mt-4 text-center lg:text-left flex items-center justify-center lg:justify-start gap-1.5 opacity-90">
-                            <i class="fa-solid fa-circle-info"></i> Direct website orders will be available soon. Please use WhatsApp for now.
+                        <p id="website-order-notice"
+                            class="text-[11px] sm:text-xs font-semibold text-brand-700/70 mt-4 text-center lg:text-left flex items-center justify-center lg:justify-start gap-1.5 opacity-90">
+                            <i class="fa-solid fa-circle-info"></i> Direct website orders will be available soon. Please
+                            use WhatsApp for now.
                         </p>
                     </div>
 
                     <!-- Hero Book Display (Right) -->
                     <div class="reveal-up delay-200 order-1 lg:order-2 flex justify-center lg:justify-end relative">
                         <!-- Floating Background Blob behind book -->
-                        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-80 md:h-80 bg-brand-200 rounded-full blur-3xl opacity-60 pointer-events-none"></div>
-                        
-                        <div class="perspective-1500 w-[240px] sm:w-[320px] lg:w-[380px] relative z-10 animate-float cursor-pointer group select-none" id="hero-book" role="button" aria-label="Click and hold to view back cover" tabindex="0">
+                        <div
+                            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-80 md:h-80 bg-brand-200 rounded-full blur-3xl opacity-60 pointer-events-none">
+                        </div>
+
+                        <div class="perspective-1500 w-[240px] sm:w-[320px] lg:w-[380px] relative z-10 animate-float cursor-pointer group select-none"
+                            id="hero-book" role="button" aria-label="Click and hold to view back cover" tabindex="0">
                             <!-- Book Wrapper for Flip -->
-                            <div class="book-wrapper relative w-full h-[340px] sm:h-[450px] lg:h-[540px] transform-style-3d shadow-[0_20px_50px_-10px_rgba(0,0,0,0.3)] group-hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)]" id="book-wrapper">
+                            <div class="book-wrapper relative w-full h-[340px] sm:h-[450px] lg:h-[540px] transform-style-3d shadow-[0_20px_50px_-10px_rgba(0,0,0,0.3)] group-hover:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.4)]"
+                                id="book-wrapper">
                                 <!-- Front Cover -->
-                                <img src="images/cover1.png" onerror="this.src='https://placehold.co/800x1200/7a1f1f/fef6e8?text=Front+Cover'" alt="ब्रह्मांशावतार श्री खेतेश्वर दाता - Front Cover" class="w-full h-full object-cover rounded-r-2xl rounded-l-md backface-hidden relative z-20" fetchpriority="high">
+                                <img src="images/cover1.png"
+                                    onerror="this.src='https://placehold.co/800x1200/7a1f1f/fef6e8?text=Front+Cover'"
+                                    alt="ब्रह्मांशावतार श्री खेतेश्वर दाता - Front Cover"
+                                    class="w-full h-full object-cover rounded-r-2xl rounded-l-md backface-hidden relative z-20"
+                                    fetchpriority="high">
                                 <!-- Back Cover (Rotated 180deg) -->
-                                <img src="images/cover2.png" onerror="this.src='https://placehold.co/800x1200/7a1f1f/fef6e8?text=Back+Cover'" alt="ब्रह्मांशावतार श्री खेतेश्वर दाता - Back Cover" class="w-full h-full object-cover absolute top-0 left-0 rounded-l-2xl rounded-r-md backface-hidden rotate-y-180 border-l border-brand-200/30">
+                                <img src="images/cover2.png"
+                                    onerror="this.src='https://placehold.co/800x1200/7a1f1f/fef6e8?text=Back+Cover'"
+                                    alt="ब्रह्मांशावतार श्री खेतेश्वर दाता - Back Cover"
+                                    class="w-full h-full object-cover absolute top-0 left-0 rounded-l-2xl rounded-r-md backface-hidden rotate-y-180 border-l border-brand-200/30">
                             </div>
-                            
+
                             <!-- Interaction Hint -->
                             <div class="absolute -bottom-14 left-1/2 -translate-x-1/2 w-full text-center">
-                                <p class="text-brand-900/70 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 bg-brand-100/90 px-4 py-2 rounded-full backdrop-blur-sm border border-brand-300 inline-flex shadow-sm pointer-events-none whitespace-nowrap">
-                                    <i class="fa-solid fa-hand-pointer text-brand-600 animate-pulse"></i> Click & Hold for Back Cover
+                                <p
+                                    class="text-brand-900/70 font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 bg-brand-100/90 px-4 py-2 rounded-full backdrop-blur-sm border border-brand-300 inline-flex shadow-sm pointer-events-none whitespace-nowrap">
+                                    <i class="fa-solid fa-hand-pointer text-brand-600 animate-pulse"></i> Click & Hold
+                                    for Back Cover
                                 </p>
                             </div>
                         </div>
@@ -286,49 +409,81 @@
         <section id="about" class="py-24 bg-white relative">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                    
+
                     <div class="lg:col-span-5 reveal-up">
                         <div class="relative rounded-3xl overflow-hidden shadow-premium group">
-                            <div class="absolute inset-0 bg-brand-800/10 group-hover:bg-transparent transition-colors z-10 pointer-events-none"></div>
-                            <img src="images/cover1.png" onerror="this.src='https://placehold.co/800x1200/7a1f1f/fef6e8?text=Book+Preview'" alt="Book Content Preview" class="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700" loading="lazy">
+                            <div
+                                class="absolute inset-0 bg-brand-800/10 group-hover:bg-transparent transition-colors z-10 pointer-events-none">
+                            </div>
+                            <img src="images/cover1.png"
+                                onerror="this.src='https://placehold.co/800x1200/7a1f1f/fef6e8?text=Book+Preview'"
+                                alt="Book Content Preview"
+                                class="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-700"
+                                loading="lazy">
                         </div>
                     </div>
 
                     <div class="lg:col-span-7 reveal-up delay-100">
-                        <span class="text-brand-500 font-bold tracking-widest uppercase text-sm mb-2 block">About The Book</span>
-                        <h2 class="text-3xl md:text-4xl font-serif font-bold text-brand-900 mb-6 leading-tight">पुस्तक के बारे में</h2>
-                        
+                        <span class="text-brand-500 font-bold tracking-widest uppercase text-sm mb-2 block">About The
+                            Book</span>
+                        <h2 class="text-3xl md:text-4xl font-serif font-bold text-brand-900 mb-6 leading-tight">पुस्तक
+                            के बारे में</h2>
+
                         <div class="prose prose-lg text-brand-900/70 mb-8 font-serif leading-relaxed">
                             <p>
-                                <strong class="text-brand-900 font-bold">‘ब्रह्मांशावतार श्री खेतेश्वर दाता : दिव्य चमत्कार एवं जीवन गाथा’</strong> एक शोधपरक धार्मिक ग्रंथ है जिसमें ब्रह्मर्षि श्री खेतारामजी महाराज के जीवन, उनके दिव्य चमत्कारों, लोककल्याणकारी कार्यों, आध्यात्मिक दर्शन तथा जनमानस पर पड़े उनके प्रभाव का प्रमाणिक एवं क्रमबद्ध वर्णन प्रस्तुत किया गया है।
+                                <strong class="text-brand-900 font-bold">‘ब्रह्मांशावतार श्री खेतेश्वर दाता : दिव्य
+                                    चमत्कार एवं जीवन गाथा’</strong> एक शोधपरक धार्मिक ग्रंथ है जिसमें ब्रह्मर्षि श्री
+                                खेतारामजी महाराज के जीवन, उनके दिव्य चमत्कारों, लोककल्याणकारी कार्यों, आध्यात्मिक दर्शन
+                                तथा जनमानस पर पड़े उनके प्रभाव का प्रमाणिक एवं क्रमबद्ध वर्णन प्रस्तुत किया गया है।
                             </p>
                             <p class="mt-4">
-                                यह पुस्तक केवल श्रद्धालुओं के लिए ही नहीं, बल्कि भारतीय संस्कृति, लोकइतिहास, धार्मिक परम्पराओं, शोधार्थियों तथा अध्यात्म में रुचि रखने वाले प्रत्येक पाठक के लिए अत्यंत उपयोगी एवं संग्रहणीय है।
+                                यह पुस्तक केवल श्रद्धालुओं के लिए ही नहीं, बल्कि भारतीय संस्कृति, लोकइतिहास, धार्मिक
+                                परम्पराओं, शोधार्थियों तथा अध्यात्म में रुचि रखने वाले प्रत्येक पाठक के लिए अत्यंत
+                                उपयोगी एवं संग्रहणीय है।
                             </p>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
                             <div class="flex items-center space-x-3 p-4 bg-brand-50 rounded-xl border border-brand-100">
-                                <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-200 text-brand-700"><i class="fa-solid fa-check"></i></div>
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-200 text-brand-700">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
                                 <span class="text-sm font-semibold text-brand-900">ऐतिहासिक एवं शोधपरक जानकारी</span>
                             </div>
                             <div class="flex items-center space-x-3 p-4 bg-brand-50 rounded-xl border border-brand-100">
-                                <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-200 text-brand-700"><i class="fa-solid fa-check"></i></div>
-                                <span class="text-sm font-semibold text-brand-900">दुर्लभ प्रसंग एवं दिव्य चमत्कार</span>
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-200 text-brand-700">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                                <span class="text-sm font-semibold text-brand-900">दुर्लभ प्रसंग एवं दिव्य
+                                    चमत्कार</span>
                             </div>
                             <div class="flex items-center space-x-3 p-4 bg-brand-50 rounded-xl border border-brand-100">
-                                <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-200 text-brand-700"><i class="fa-solid fa-check"></i></div>
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-200 text-brand-700">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
                                 <span class="text-sm font-semibold text-brand-900">सरल एवं शुद्ध हिन्दी भाषा</span>
                             </div>
-                            <div class="flex items-center space-x-3 p-4 bg-brand-100/50 rounded-xl border border-brand-300 shadow-sm relative overflow-hidden">
-                                <div class="absolute top-0 right-0 w-16 h-16 bg-brand-500/10 rounded-bl-full -mr-8 -mt-8"></div>
-                                <div class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-500 text-white relative z-10"><i class="fa-solid fa-star"></i></div>
-                                <span class="text-sm font-bold text-brand-900 relative z-10">प्रीमियम हार्डकवर (Hardcover) संस्करण</span>
+                            <div
+                                class="flex items-center space-x-3 p-4 bg-brand-100/50 rounded-xl border border-brand-300 shadow-sm relative overflow-hidden">
+                                <div
+                                    class="absolute top-0 right-0 w-16 h-16 bg-brand-500/10 rounded-bl-full -mr-8 -mt-8">
+                                </div>
+                                <div
+                                    class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-brand-500 text-white relative z-10">
+                                    <i class="fa-solid fa-star"></i>
+                                </div>
+                                <span class="text-sm font-bold text-brand-900 relative z-10">प्रीमियम हार्डकवर
+                                    (Hardcover) संस्करण</span>
                             </div>
                         </div>
 
-                        <a href="#" class="auth-required inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-white bg-brand-800 hover:bg-brand-900 shadow-lg shadow-brand-800/30 transition-all transform hover:-translate-y-1 focus:ring-4 focus:ring-brand-200 order-now-btn" data-redirect="order.html">
-                            Order from here
+                        <a href="#"
+                            class="auth-required inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-white bg-brand-800 hover:bg-brand-900 shadow-lg shadow-brand-800/30 transition-all transform hover:-translate-y-1 focus:ring-4 focus:ring-brand-200 order-now-btn"
+                            data-redirect="order.html">
+                            Order Now
                         </a>
                     </div>
                 </div>
@@ -338,30 +493,37 @@
         <section class="py-20 bg-brand-50 border-t border-brand-200/50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-12 reveal-up">
-                    <span class="text-brand-500 font-bold tracking-widest uppercase text-sm mb-2 block">Specifications</span>
+                    <span
+                        class="text-brand-500 font-bold tracking-widest uppercase text-sm mb-2 block">Specifications</span>
                     <h2 class="text-3xl md:text-4xl font-serif font-bold text-brand-900 mb-4">पुस्तक विवरण</h2>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-6 reveal-up delay-100">
-                    <div class="bg-white p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-100">
+                    <div
+                        class="bg-white p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-100">
                         <i class="fa-solid fa-language text-3xl text-brand-500 mb-4"></i>
                         <h3 class="text-sm text-brand-900/60 uppercase tracking-wide font-semibold mb-1">भाषा</h3>
                         <p class="text-lg font-bold text-brand-900">हिन्दी</p>
                     </div>
-                    <div class="bg-white p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-100">
+                    <div
+                        class="bg-white p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-100">
                         <i class="fa-solid fa-book-open text-3xl text-brand-500 mb-4"></i>
                         <h3 class="text-sm text-brand-900/60 uppercase tracking-wide font-semibold mb-1">संस्करण</h3>
                         <p class="text-lg font-bold text-brand-900">प्रथम संस्करण</p>
                     </div>
-                    <div class="bg-white p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-100">
+                    <div
+                        class="bg-white p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-100">
                         <i class="fa-solid fa-file-lines text-3xl text-brand-500 mb-4"></i>
                         <h3 class="text-sm text-brand-900/60 uppercase tracking-wide font-semibold mb-1">कुल पृष्ठ</h3>
-                        <p class="text-lg font-bold text-brand-900">106 Pages</p>
+                        <p class="text-lg font-bold text-brand-900">108 Pages</p>
                     </div>
-                    <div class="bg-brand-800 p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-700 relative overflow-hidden group">
-                        <div class="absolute inset-0 bg-brand-700 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div
+                        class="bg-brand-800 p-6 rounded-2xl text-center shadow-premium-sm hover:shadow-premium transition-shadow border border-brand-700 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-brand-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                        </div>
                         <i class="fa-solid fa-book-journal-whills text-3xl text-brand-400 mb-4 relative z-10"></i>
-                        <h3 class="text-sm text-brand-200/80 uppercase tracking-wide font-semibold mb-1 relative z-10">कवर प्रकार</h3>
+                        <h3 class="text-sm text-brand-200/80 uppercase tracking-wide font-semibold mb-1 relative z-10">
+                            कवर प्रकार</h3>
                         <p class="text-lg font-bold text-white relative z-10">Hardcover</p>
                     </div>
                 </div>
@@ -377,36 +539,65 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
                     <!-- Author 1 -->
-                    <article class="bg-brand-50/50 border border-brand-100 rounded-3xl p-8 flex flex-col sm:flex-row gap-8 items-center sm:items-start shadow-premium-sm hover:shadow-premium transition-all reveal-up">
-                        <img src="images/author1.png" onerror="this.src='https://placehold.co/400x400/7a1f1f/fef6e8?text=Jitendra+Singh'" alt="जितेन्द्रसिंह राजपुरोहित" class="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl object-cover shadow-md shrink-0 border-2 border-brand-200" loading="lazy">
+                    <article
+                        class="bg-brand-50/50 border border-brand-100 rounded-3xl p-8 flex flex-col sm:flex-row gap-8 items-center sm:items-start shadow-premium-sm hover:shadow-premium transition-all reveal-up">
+                        <img src="images/author1.png"
+                            onerror="this.src='https://placehold.co/400x400/7a1f1f/fef6e8?text=Jitendra+Singh'"
+                            alt="जितेन्द्रसिंह राजपुरोहित"
+                            class="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl object-cover shadow-md shrink-0 border-2 border-brand-200"
+                            loading="lazy">
                         <div class="text-center sm:text-left">
                             <h3 class="text-2xl font-serif font-bold text-brand-900 mb-1">जितेन्द्रसिंह राजपुरोहित</h3>
                             <p class="text-brand-600 font-semibold mb-4 text-sm">पुत्र श्री छगनसिंहजी राजपुरोहित</p>
                             <p class="text-brand-900/70 text-sm leading-relaxed mb-6">
-                                भारतीय संस्कृति, लोकइतिहास तथा धार्मिक परम्पराओं के अध्ययन एवं अनुसंधान के प्रति विशेष अभिरुचि रखते हैं। ऐतिहासिक साक्ष्यों एवं क्षेत्रीय परम्पराओं के माध्यम से समाज की सांस्कृतिक धरोहर के संरक्षण का प्रयास कर रहे हैं।
+                                भारतीय संस्कृति, लोकइतिहास तथा धार्मिक परम्पराओं के अध्ययन एवं अनुसंधान के प्रति विशेष
+                                अभिरुचि रखते हैं। ऐतिहासिक साक्ष्यों एवं क्षेत्रीय परम्पराओं के माध्यम से समाज की
+                                सांस्कृतिक धरोहर के संरक्षण का प्रयास कर रहे हैं।
                             </p>
                             <div class="flex flex-wrap justify-center sm:justify-start gap-2">
-                                <span class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> D.El.Ed.</span>
-                                <span class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.A.</span>
-                                <span class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.Ed.</span>
-                                <span class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> PGDCA</span>
-                                <span class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> M.A. (Hindi)</span>
+                                <span
+                                    class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i
+                                        class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> D.El.Ed.</span>
+                                <span
+                                    class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i
+                                        class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.A.</span>
+                                <span
+                                    class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i
+                                        class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.Ed.</span>
+                                <span
+                                    class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i
+                                        class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> PGDCA</span>
+                                <span
+                                    class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i
+                                        class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> M.A. (Hindi)</span>
                             </div>
                         </div>
                     </article>
 
                     <!-- Author 2 -->
-                    <article class="bg-brand-50/50 border border-brand-100 rounded-3xl p-8 flex flex-col sm:flex-row gap-8 items-center sm:items-start shadow-premium-sm hover:shadow-premium transition-all reveal-up delay-100">
-                        <img src="images/author2.png" onerror="this.src='https://placehold.co/400x400/7a1f1f/fef6e8?text=Chandra'" alt="चन्द्रा राजपुरोहित" class="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl object-cover shadow-md shrink-0 border-2 border-brand-200" loading="lazy">
+                    <article
+                        class="bg-brand-50/50 border border-brand-100 rounded-3xl p-8 flex flex-col sm:flex-row gap-8 items-center sm:items-start shadow-premium-sm hover:shadow-premium transition-all reveal-up delay-100">
+                        <img src="images/author2.png"
+                            onerror="this.src='https://placehold.co/400x400/7a1f1f/fef6e8?text=Chandra'"
+                            alt="चन्द्रा राजपुरोहित"
+                            class="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl object-cover shadow-md shrink-0 border-2 border-brand-200"
+                            loading="lazy">
                         <div class="text-center sm:text-left">
                             <h3 class="text-2xl font-serif font-bold text-brand-900 mb-1">चन्द्रा राजपुरोहित</h3>
                             <p class="text-brand-600 font-semibold mb-4 text-sm">पुत्री श्री डूँगरसिंहजी राजपुरोहित</p>
                             <p class="text-brand-900/70 text-sm leading-relaxed mb-6">
-                                भारतीय संस्कृति एवं आध्यात्मिक परम्पराओं के अध्ययन में विशेष रुचि रखती हैं। शोध, संकलन तथा लेखन के माध्यम से इस ग्रंथ को प्रमाणिक, व्यवस्थित एवं सहज रूप प्रदान करने में महत्वपूर्ण योगदान दिया है।
+                                भारतीय संस्कृति एवं आध्यात्मिक परम्पराओं के अध्ययन में विशेष रुचि रखती हैं। शोध, संकलन
+                                तथा लेखन के माध्यम से इस ग्रंथ को प्रमाणिक, व्यवस्थित एवं सहज रूप प्रदान करने में
+                                महत्वपूर्ण योगदान दिया है।
                             </p>
                             <div class="flex flex-wrap justify-center sm:justify-start gap-2">
-                                <span class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.A. (Psychology)</span>
-                                <span class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.Tech</span>
+                                <span
+                                    class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i
+                                        class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.A.
+                                    (Psychology)</span>
+                                <span
+                                    class="bg-white border border-brand-200 text-brand-900 text-xs px-3 py-1.5 rounded-full shadow-sm"><i
+                                        class="fa-solid fa-graduation-cap text-brand-500 mr-1"></i> B.Tech</span>
                             </div>
                         </div>
                     </article>
@@ -415,50 +606,108 @@
         </section>
 
         <section id="gallery" class="py-24 bg-brand-900 text-white relative overflow-hidden">
-            <div class="absolute inset-0 opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')]"></div>
-            
+            <div
+                class="absolute inset-0 opacity-5 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')]">
+            </div>
+
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 <div class="text-center mb-12 reveal-up">
                     <span class="text-brand-400 font-bold tracking-widest uppercase text-sm mb-2 block">Gallery</span>
                     <h2 class="text-3xl md:text-4xl font-serif font-bold mb-4">पुस्तक झलकियाँ</h2>
-                    <p class="text-brand-200 text-sm sm:text-base">स्लाइड करने के लिए स्वाइप करें या इमेजेज पर क्लिक करें</p>
+                    <p class="text-brand-200 text-sm sm:text-base">स्लाइड करने के लिए स्वाइप करें या इमेजेज पर क्लिक
+                        करें</p>
                 </div>
 
                 <!-- 3D Interactive Carousel -->
-                <div class="relative w-full h-[320px] sm:h-[400px] md:h-[480px] flex items-center justify-center perspective-1500 select-none overflow-hidden sm:overflow-visible" id="image-carousel">
-                    <!-- Carousel Items generated for gal1.png to gal8.png -->
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="0">
-                        <img src="images/gal1.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+1'" alt="Gallery 1" class="w-full h-full object-cover" loading="lazy">
+                <div class="relative w-full h-[320px] sm:h-[400px] md:h-[480px] flex items-center justify-center perspective-1500 select-none overflow-hidden sm:overflow-visible"
+                    id="image-carousel">
+                    <!-- Carousel Items: images 1.jpeg, 3.jpeg and video 2.mp4 plus gal1-8 -->
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="0">
+                        <img src="images/1.jpeg"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+1'"
+                            alt="Gallery Photo 1" class="w-full h-full object-cover" loading="lazy">
                     </div>
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="1">
-                        <img src="images/gal2.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+2'" alt="Gallery 2" class="w-full h-full object-cover" loading="lazy">
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800 relative group"
+                        data-index="1">
+                        <video src="images/2.mp4" class="w-full h-full object-cover" muted loop playsinline
+                            autoplay></video>
+                        <div
+                            class="absolute inset-0 bg-black/30 flex flex-col items-center justify-center pointer-events-none transition-opacity group-hover:bg-black/20">
+                            <div
+                                class="w-12 h-12 rounded-full bg-brand-500/90 backdrop-blur-md flex items-center justify-center text-white text-xl shadow-lg border border-white/20">
+                                <i class="fa-solid fa-play ml-0.5"></i>
+                            </div>
+                            <span
+                                class="text-xs text-white/90 font-semibold mt-2 px-2 py-0.5 rounded bg-black/40 backdrop-blur-sm">Video</span>
+                        </div>
                     </div>
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="2">
-                        <img src="images/gal3.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+3'" alt="Gallery 3" class="w-full h-full object-cover" loading="lazy">
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="2">
+                        <img src="images/3.jpeg"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+3'"
+                            alt="Gallery Photo 3" class="w-full h-full object-cover" loading="lazy">
                     </div>
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="3">
-                        <img src="images/gal4.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+4'" alt="Gallery 4" class="w-full h-full object-cover" loading="lazy">
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="3">
+                        <img src="images/gal1.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+1'"
+                            alt="Gallery 1" class="w-full h-full object-cover" loading="lazy">
                     </div>
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="4">
-                        <img src="images/gal5.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+5'" alt="Gallery 5" class="w-full h-full object-cover" loading="lazy">
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="4">
+                        <img src="images/gal2.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+2'"
+                            alt="Gallery 2" class="w-full h-full object-cover" loading="lazy">
                     </div>
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="5">
-                        <img src="images/gal6.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+6'" alt="Gallery 6" class="w-full h-full object-cover" loading="lazy">
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="5">
+                        <img src="images/gal3.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+3'"
+                            alt="Gallery 3" class="w-full h-full object-cover" loading="lazy">
                     </div>
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="6">
-                        <img src="images/gal7.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+7'" alt="Gallery 7" class="w-full h-full object-cover" loading="lazy">
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="6">
+                        <img src="images/gal4.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+4'"
+                            alt="Gallery 4" class="w-full h-full object-cover" loading="lazy">
                     </div>
-                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800" data-index="7">
-                        <img src="images/gal8.png" onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+8'" alt="Gallery 8" class="w-full h-full object-cover" loading="lazy">
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="7">
+                        <img src="images/gal5.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+5'"
+                            alt="Gallery 5" class="w-full h-full object-cover" loading="lazy">
+                    </div>
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="8">
+                        <img src="images/gal6.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+6'"
+                            alt="Gallery 6" class="w-full h-full object-cover" loading="lazy">
+                    </div>
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="9">
+                        <img src="images/gal7.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+7'"
+                            alt="Gallery 7" class="w-full h-full object-cover" loading="lazy">
+                    </div>
+                    <div class="carousel-item absolute w-[180px] h-[260px] sm:w-64 sm:h-[360px] md:w-80 md:h-[450px] rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-brand-800"
+                        data-index="10">
+                        <img src="images/gal8.png"
+                            onerror="this.src='https://placehold.co/600x800/3b2a1d/c9a227?text=Gallery+8'"
+                            alt="Gallery 8" class="w-full h-full object-cover" loading="lazy">
                     </div>
                 </div>
 
                 <!-- Carousel Controls -->
                 <div class="flex justify-center items-center gap-6 mt-10">
-                    <button id="car-prev" class="w-12 h-12 rounded-full bg-brand-800 border border-brand-700 text-white hover:bg-brand-500 hover:border-brand-500 flex items-center justify-center focus:outline-none transition-colors shadow-lg" aria-label="Previous Slide">
+                    <button id="car-prev"
+                        class="w-12 h-12 rounded-full bg-brand-800 border border-brand-700 text-white hover:bg-brand-500 hover:border-brand-500 flex items-center justify-center focus:outline-none transition-colors shadow-lg"
+                        aria-label="Previous Slide">
                         <i class="fa-solid fa-chevron-left"></i>
                     </button>
-                    <button id="car-next" class="w-12 h-12 rounded-full bg-brand-800 border border-brand-700 text-white hover:bg-brand-500 hover:border-brand-500 flex items-center justify-center focus:outline-none transition-colors shadow-lg" aria-label="Next Slide">
+                    <button id="car-next"
+                        class="w-12 h-12 rounded-full bg-brand-800 border border-brand-700 text-white hover:bg-brand-500 hover:border-brand-500 flex items-center justify-center focus:outline-none transition-colors shadow-lg"
+                        aria-label="Next Slide">
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
                 </div>
@@ -466,68 +715,98 @@
         </section>
 
         <!-- Lightbox Overlay -->
-        <div id="lightbox" class="fixed inset-0 bg-brand-900/95 z-[100] hidden flex items-center justify-center backdrop-blur-sm">
-            <button id="lb-close" class="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full text-white flex items-center justify-center transition-colors" aria-label="Close Lightbox">
+        <div id="lightbox"
+            class="fixed inset-0 bg-brand-900/95 z-[100] hidden items-center justify-center backdrop-blur-sm">
+            <button id="lb-close"
+                class="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 rounded-full text-white flex items-center justify-center transition-colors z-10"
+                aria-label="Close Lightbox">
                 <i class="fa-solid fa-xmark text-2xl"></i>
             </button>
-            <img id="lb-img" src="" alt="Fullscreen Image" class="max-w-[90%] max-h-[90vh] object-contain rounded-lg shadow-2xl">
+            <img id="lb-img" src="" alt="Fullscreen Image"
+                class="max-w-[90%] max-h-[90vh] object-contain rounded-lg shadow-2xl hidden">
+            <video id="lb-video" src="" controls autoplay
+                class="max-w-[90%] max-h-[90vh] object-contain rounded-lg shadow-2xl hidden"></video>
         </div>
 
         <section id="faq" class="py-24 bg-brand-50 relative">
             <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-16 reveal-up">
                     <span class="text-brand-500 font-bold tracking-widest uppercase text-sm mb-2 block">FAQ</span>
-                    <h2 class="text-3xl md:text-4xl font-serif font-bold text-brand-900 mb-4">अक्सर पूछे जाने वाले प्रश्न</h2>
+                    <h2 class="text-3xl md:text-4xl font-serif font-bold text-brand-900 mb-4">अक्सर पूछे जाने वाले
+                        प्रश्न</h2>
                 </div>
 
                 <div class="space-y-4 reveal-up delay-100" id="faq-accordion">
                     <!-- FAQ Item 1 -->
-                    <div class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
-                        <button class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors" aria-expanded="false">
-                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">क्या यह पुस्तक अभी उपलब्ध है?</span>
+                    <div
+                        class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
+                        <button
+                            class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors"
+                            aria-expanded="false">
+                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">क्या यह पुस्तक अभी उपलब्ध
+                                है?</span>
                             <i class="fa-solid fa-plus faq-icon text-brand-500 text-xl shrink-0"></i>
                         </button>
                         <div class="faq-content">
-                            <div class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
-                                वर्तमान में यह पुस्तक प्री-ऑर्डर पर उपलब्ध है। अनुमानित डिलीवरी (Pre-order delivery) 15–20 दिनों के भीतर की जाएगी।
+                            <div
+                                class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
+                                वर्तमान में यह पुस्तक प्री-ऑर्डर पर उपलब्ध है। अनुमानित डिलीवरी (Pre-order delivery)
+                                5–7 दिनों के भीतर की जाएगी।
                             </div>
                         </div>
                     </div>
 
                     <!-- FAQ Item 2 -->
-                    <div class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
-                        <button class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors" aria-expanded="false">
-                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">क्या Cash on Delivery उपलब्ध है?</span>
+                    <div
+                        class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
+                        <button
+                            class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors"
+                            aria-expanded="false">
+                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">क्या Cash on Delivery
+                                उपलब्ध है?</span>
                             <i class="fa-solid fa-plus faq-icon text-brand-500 text-xl shrink-0"></i>
                         </button>
                         <div class="faq-content">
-                            <div class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
-                                वर्तमान में केवल ऑनलाइन भुगतान स्वीकार किए जाते हैं। भुगतान की जानकारी WhatsApp पर साझा की जाएगी।
+                            <div
+                                class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
+                                वर्तमान में केवल ऑनलाइन भुगतान स्वीकार किए जाते हैं। भुगतान की जानकारी WhatsApp पर साझा
+                                की जाएगी।
                             </div>
                         </div>
                     </div>
 
                     <!-- FAQ Item 3 -->
-                    <div class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
-                        <button class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors" aria-expanded="false">
-                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">पुस्तक ऑर्डर कैसे करें?</span>
+                    <div
+                        class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
+                        <button
+                            class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors"
+                            aria-expanded="false">
+                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">पुस्तक ऑर्डर कैसे
+                                करें?</span>
                             <i class="fa-solid fa-plus faq-icon text-brand-500 text-xl shrink-0"></i>
                         </button>
                         <div class="faq-content">
-                            <div class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
-                                "Pre-Order Now" बटन पर क्लिक करें। WhatsApp खुल जाएगा जहाँ से आप अपना ऑर्डर आसानी से कन्फर्म कर सकते हैं।
+                            <div
+                                class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
+                                "Pre-Order Now" बटन पर क्लिक करें। WhatsApp खुल जाएगा जहाँ से आप अपना ऑर्डर आसानी से
+                                कन्फर्म कर सकते हैं।
                             </div>
                         </div>
                     </div>
 
                     <!-- FAQ Item 4 -->
-                    <div class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
-                        <button class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors" aria-expanded="false">
-                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">क्या पूरे भारत में डिलीवरी उपलब्ध है?</span>
+                    <div
+                        class="faq-item bg-white border border-brand-200/60 rounded-2xl overflow-hidden shadow-premium-sm">
+                        <button
+                            class="w-full text-left px-6 py-5 flex justify-between items-center focus:outline-none hover:bg-brand-50/50 transition-colors"
+                            aria-expanded="false">
+                            <span class="font-bold text-brand-900 pr-4 text-base sm:text-lg">क्या पूरे भारत में डिलीवरी
+                                उपलब्ध है?</span>
                             <i class="fa-solid fa-plus faq-icon text-brand-500 text-xl shrink-0"></i>
                         </button>
                         <div class="faq-content">
-                            <div class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
+                            <div
+                                class="px-6 pb-5 pt-1 text-brand-900/70 leading-relaxed text-sm sm:text-base border-t border-brand-100/50">
                                 हाँ, पुस्तक भारत के सभी राज्यों में सुरक्षित पैकेजिंग के साथ भेजी जाएगी।
                             </div>
                         </div>
@@ -538,14 +817,18 @@
 
         <footer id="footer" class="bg-brand-900 text-white pt-20 pb-10 border-t-4 border-brand-500">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                
+
                 <!-- CTA Box inside Footer -->
-                <div id="footer-contact" class="bg-brand-800 rounded-3xl overflow-hidden shadow-2xl relative reveal-up mb-16 -mt-32 border border-brand-700">
+                <div id="footer-contact"
+                    class="bg-brand-800 rounded-3xl overflow-hidden shadow-2xl relative reveal-up mb-16 -mt-32 border border-brand-700">
                     <div class="relative px-6 py-12 sm:px-12 sm:py-16 text-center text-white">
                         <h2 class="text-3xl md:text-4xl font-serif font-bold mb-4">अभी प्री-ऑर्डर करें</h2>
-                        <p class="text-lg text-brand-200 mb-8 max-w-2xl mx-auto">हार्डकवर लॉन्च ऑफर के अंतर्गत <strong class="text-brand-400">₹399</strong> में अपनी प्रति सुरक्षित करें। (MRP: <span class="line-through text-brand-300/70">₹599</span>)</p>
-                        <a href="#" class="auth-required inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-brand-900 bg-brand-400 hover:bg-white shadow-xl transition-all transform hover:-translate-y-1 order-now-btn" data-redirect="order.html">
-                            Order from here
+                        <p class="text-lg text-brand-200 mb-8 max-w-2xl mx-auto">हार्डकवर लॉन्च ऑफर के अंतर्गत <strong
+                                id="footer-book-price" class="text-brand-400">₹399</strong> में अपनी प्रति सुरक्षित करें।</p>
+                        <a href="#"
+                            class="auth-required inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-brand-900 bg-brand-400 hover:bg-white shadow-xl transition-all transform hover:-translate-y-1 order-now-btn"
+                            data-redirect="order.html">
+                            Order Now
                         </a>
                     </div>
                 </div>
@@ -554,15 +837,20 @@
                     <!-- Brand -->
                     <div class="md:col-span-1">
                         <a href="#home" class="inline-flex items-center gap-3 group mb-6 text-left">
-                            <img src="images/logo2.png" alt="Jagirdar Publications" class="h-10 sm:h-12 w-auto opacity-90 group-hover:opacity-100 transition-opacity" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <img src="images/logo2.png" alt="Jagirdar Publications"
+                                class="h-10 sm:h-12 w-auto opacity-90 group-hover:opacity-100 transition-opacity"
+                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <!-- Fallback Icon if logo2.png fails to load -->
-                            <div style="display:none;" class="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-xl items-center justify-center text-brand-400 shadow-md">
+                            <div style="display:none;"
+                                class="w-10 h-10 sm:w-12 sm:h-12 bg-white/10 rounded-xl items-center justify-center text-brand-400 shadow-md">
                                 <i class="fa-solid fa-book-open-reader text-xl sm:text-2xl"></i>
                             </div>
                             <!-- Logo Text -->
                             <div class="flex flex-col justify-center mt-1">
-                                <span class="font-serif font-bold text-[22px] sm:text-[26px] text-white leading-none tracking-wide">Jagirdar</span>
-                                <span class="font-sans font-bold text-[9px] sm:text-[11px] text-brand-400 tracking-[0.18em] uppercase leading-none mt-1">Publications</span>
+                                <span
+                                    class="font-serif font-bold text-[22px] sm:text-[26px] text-white leading-none tracking-wide">Jagirdar</span>
+                                <span
+                                    class="font-sans font-bold text-[9px] sm:text-[11px] text-brand-400 tracking-[0.18em] uppercase leading-none mt-1">Publications</span>
                             </div>
                         </a>
                         <p class="text-brand-200/70 text-sm leading-relaxed pr-4">
@@ -574,10 +862,17 @@
                     <div>
                         <h3 class="text-sm font-bold uppercase tracking-wider mb-6 text-brand-400">Quick Links</h3>
                         <ul class="space-y-3">
-                            <li><a href="#about" class="text-brand-200/70 hover:text-white transition-colors text-sm">About Book</a></li>
-                            <li><a href="#authors" class="text-brand-200/70 hover:text-white transition-colors text-sm">Authors</a></li>
-                            <li><a href="#gallery" class="text-brand-200/70 hover:text-white transition-colors text-sm">Gallery</a></li>
-                            <li><a href="#faq" class="text-brand-200/70 hover:text-white transition-colors text-sm">FAQ</a></li>
+                            <li><a href="#about"
+                                    class="text-brand-200/70 hover:text-white transition-colors text-sm">About Book</a>
+                            </li>
+                            <li><a href="#authors"
+                                    class="text-brand-200/70 hover:text-white transition-colors text-sm">Authors</a>
+                            </li>
+                            <li><a href="#gallery"
+                                    class="text-brand-200/70 hover:text-white transition-colors text-sm">Gallery</a>
+                            </li>
+                            <li><a href="#faq"
+                                    class="text-brand-200/70 hover:text-white transition-colors text-sm">FAQ</a></li>
                         </ul>
                     </div>
 
@@ -586,57 +881,75 @@
                         <h3 class="text-sm font-bold uppercase tracking-wider mb-6 text-brand-400">Contact Us</h3>
                         <ul class="space-y-4">
                             <li class="flex items-center text-brand-200/80 text-sm font-medium">
-                                <div class="w-6 flex justify-center mr-3 shrink-0"><i class="fa-solid fa-phone text-brand-400 text-base"></i></div>
-                                <a href="tel:+919904499394" class="hover:text-white transition-colors">+91 99044 99394</a>
+                                <div class="w-6 flex justify-center mr-3 shrink-0"><i
+                                        class="fa-solid fa-phone text-brand-400 text-base"></i></div>
+                                <a href="tel:+919904499394" class="hover:text-white transition-colors">+91 99044
+                                    99394</a>
                             </li>
                             <li class="flex items-center text-brand-200/80 text-sm font-medium">
-                                <div class="w-6 flex justify-center mr-3 shrink-0"><i class="fa-solid fa-envelope text-brand-400 text-base"></i></div>
-                                <a href="mailto:info@jagirdarpublication.in" class="hover:text-white transition-colors break-all">info@jagirdarpublication.in</a>
+                                <div class="w-6 flex justify-center mr-3 shrink-0"><i
+                                        class="fa-solid fa-envelope text-brand-400 text-base"></i></div>
+                                <a href="mailto:info@jagirdarpublication.in"
+                                    class="hover:text-white transition-colors break-all">info@jagirdarpublication.in</a>
                             </li>
                             <li class="flex items-center text-brand-200/80 text-sm font-medium">
-                                <div class="w-6 flex justify-center mr-3 shrink-0"><i class="fa-brands fa-instagram text-brand-400 text-lg"></i></div>
-                                <a href="https://instagram.com/jagirdar_publications" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors">@jagirdar_publications</a>
+                                <div class="w-6 flex justify-center mr-3 shrink-0"><i
+                                        class="fa-brands fa-instagram text-brand-400 text-lg"></i></div>
+                                <a href="https://instagram.com/jagirdar_publications" target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="hover:text-white transition-colors">@jagirdar_publications</a>
                             </li>
                         </ul>
                     </div>
                 </div>
 
-                <div class="border-t border-brand-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div
+                    class="border-t border-brand-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p class="text-brand-200/50 text-xs">
                         &copy; 2026 Jagirdar Publications. All Rights Reserved.
                     </p>
                     <div class="flex gap-4 text-xs text-brand-200/50">
-                        <a href="#" class="hover:text-white transition-colors policy-trigger" data-policy="policy-privacy">Privacy Policy</a>
-                        <a href="#" class="hover:text-white transition-colors policy-trigger" data-policy="policy-terms">Terms of Service</a>
-                        <a href="#" class="hover:text-white transition-colors policy-trigger" data-policy="policy-refund">Refund Policy</a>
+                        <a href="#" class="hover:text-white transition-colors policy-trigger"
+                            data-policy="policy-privacy">Privacy Policy</a>
+                        <a href="#" class="hover:text-white transition-colors policy-trigger"
+                            data-policy="policy-terms">Terms of Service</a>
+                        <a href="#" class="hover:text-white transition-colors policy-trigger"
+                            data-policy="policy-refund">Refund Policy</a>
                     </div>
                 </div>
             </div>
         </footer>
     </main>
 
-    
+
     <!-- Policy Modal Container -->
-    <div id="policy-modal" class="fixed inset-0 z-[200] bg-brand-900/80 backdrop-blur-sm hidden items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
-        <div class="bg-brand-50 border-2 border-brand-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl transform scale-95 transition-transform duration-300" id="policy-modal-content" onclick="event.stopPropagation()">
+    <div id="policy-modal"
+        class="fixed inset-0 z-[200] bg-brand-900/80 backdrop-blur-sm hidden items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
+        <div class="bg-brand-50 border-2 border-brand-800 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl transform scale-95 transition-transform duration-300"
+            id="policy-modal-content" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center p-5 sm:p-6 border-b border-brand-800/20 shrink-0">
                 <h3 id="policy-title" class="text-xl sm:text-2xl font-serif font-bold text-brand-900">Policy</h3>
-                <button class="close-policy w-10 h-10 rounded-full bg-white text-brand-800 border border-brand-200 hover:bg-brand-100 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-brand-800">
+                <button
+                    class="close-policy w-10 h-10 rounded-full bg-white text-brand-800 border border-brand-200 hover:bg-brand-100 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-brand-800">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
-            <div id="policy-body" class="p-5 sm:p-6 overflow-y-auto text-brand-900/80 space-y-4 text-sm sm:text-base leading-relaxed">
+            <div id="policy-body"
+                class="p-5 sm:p-6 overflow-y-auto text-brand-900/80 space-y-4 text-sm sm:text-base leading-relaxed">
                 <!-- Dynamic Content goes here -->
             </div>
         </div>
     </div>
 
     <!-- WhatsApp Order Modal -->
-    <div id="wa-order-modal" class="fixed inset-0 z-[200] bg-brand-900/80 backdrop-blur-sm hidden items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
-        <div class="bg-brand-50 border-2 border-brand-800 rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl transform scale-95 transition-transform duration-300" id="wa-order-modal-content" onclick="event.stopPropagation()">
+    <div id="wa-order-modal"
+        class="fixed inset-0 z-[200] bg-brand-900/80 backdrop-blur-sm hidden items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300">
+        <div class="bg-brand-50 border-2 border-brand-800 rounded-3xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl transform scale-95 transition-transform duration-300"
+            id="wa-order-modal-content" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center p-5 sm:p-6 border-b border-brand-800/20 shrink-0">
                 <h3 class="text-xl sm:text-2xl font-serif font-bold text-brand-900">Pre-Order Details</h3>
-                <button id="close-wa-modal" class="w-10 h-10 rounded-full bg-white text-brand-800 border border-brand-200 hover:bg-brand-100 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-brand-800">
+                <button id="close-wa-modal"
+                    class="w-10 h-10 rounded-full bg-white text-brand-800 border border-brand-200 hover:bg-brand-100 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-brand-800">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
@@ -644,24 +957,30 @@
                 <form id="wa-order-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-brand-900 mb-1">Name</label>
-                        <input type="text" id="wa-name" required class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <input type="text" id="wa-name" required
+                            class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-brand-900 mb-1">Mobile Number</label>
-                        <input type="tel" id="wa-mobile" required class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <input type="tel" id="wa-mobile" required
+                            class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-brand-900 mb-1">Address</label>
-                        <textarea id="wa-address" rows="3" required class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
+                        <textarea id="wa-address" rows="3" required
+                            class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"></textarea>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-brand-900 mb-1">Quantity</label>
-                        <input type="number" id="wa-qty" value="1" min="1" required class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <input type="number" id="wa-qty" value="1" min="1" required
+                            class="w-full px-4 py-2 rounded-xl border border-brand-300 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
                     </div>
                     <div class="pt-2">
-                        <p class="text-lg font-bold text-brand-900">Total Amount: <span id="wa-total-amount">₹399</span></p>
+                        <p class="text-lg font-bold text-brand-900">Total Amount: <span id="wa-total-amount">₹399</span>
+                        </p>
                     </div>
-                    <button type="submit" class="w-full inline-flex items-center justify-center px-8 py-3 text-base font-bold rounded-full text-white bg-[#25D366] hover:bg-[#1ebe57] shadow-lg shadow-[#25D366]/30 transition-all transform hover:-translate-y-1 focus:ring-4 focus:ring-[#25D366]/50 mt-4">
+                    <button type="submit"
+                        class="w-full inline-flex items-center justify-center px-8 py-3 text-base font-bold rounded-full text-white bg-[#25D366] hover:bg-[#1ebe57] shadow-lg shadow-[#25D366]/30 transition-all transform hover:-translate-y-1 focus:ring-4 focus:ring-[#25D366]/50 mt-4">
                         <i class="fa-brands fa-whatsapp text-xl mr-2.5"></i>
                         <span>Send on WhatsApp</span>
                     </button>
@@ -673,7 +992,9 @@
     <!-- Hidden Raw Content for Modals -->
     <div id="policy-privacy" data-title="Privacy Policy" class="hidden">
         <p class="font-bold text-brand-900">Last Updated: July 2026</p>
-        <p>Welcome to Jagirdar Publications ("we," "our," or "us"). Your privacy is important to us. This Privacy Policy explains how we collect, use, and protect your personal information when you visit our website www.jagirdarpublication.in or place an order through WhatsApp.</p>
+        <p>Welcome to Jagirdar Publications ("we," "our," or "us"). Your privacy is important to us. This Privacy Policy
+            explains how we collect, use, and protect your personal information when you visit our website
+            www.jagirdarpublication.in or place an order through WhatsApp.</p>
         <h4 class="font-bold text-brand-900 mt-4">1. Information We Collect</h4>
         <p>We may collect the following information:</p>
         <ul class="list-disc pl-5 space-y-1">
@@ -686,11 +1007,14 @@
             <li>Website usage information such as browser type, device information, and IP address.</li>
         </ul>
         <h4 class="font-bold text-brand-900 mt-4">2. How We Use Your Information</h4>
-        <p>We use your information to: Process and confirm book orders, Deliver your purchased products, Provide customer support, Send order updates, Improve our website and services, Comply with legal obligations.</p>
+        <p>We use your information to: Process and confirm book orders, Deliver your purchased products, Provide
+            customer support, Send order updates, Improve our website and services, Comply with legal obligations.</p>
         <h4 class="font-bold text-brand-900 mt-4">3. Information Sharing</h4>
-        <p>We do not sell, rent, or trade your personal information. Your information may only be shared with: Delivery partners, Payment service providers, Government authorities when legally required.</p>
+        <p>We do not sell, rent, or trade your personal information. Your information may only be shared with: Delivery
+            partners, Payment service providers, Government authorities when legally required.</p>
         <h4 class="font-bold text-brand-900 mt-4">4. Data Security</h4>
-        <p>We implement reasonable security measures to protect your personal information. However, no method of internet transmission is completely secure.</p>
+        <p>We implement reasonable security measures to protect your personal information. However, no method of
+            internet transmission is completely secure.</p>
         <h4 class="font-bold text-brand-900 mt-4">5. Contact Us</h4>
         <p>Email: info@jagirdarpublication.in<br>WhatsApp: +91 9904499394</p>
     </div>
@@ -701,36 +1025,47 @@
         <h4 class="font-bold text-brand-900 mt-4">1. Acceptance</h4>
         <p>By accessing this website or placing an order, you agree to comply with these Terms & Conditions.</p>
         <h4 class="font-bold text-brand-900 mt-4">2. Products & Pricing</h4>
-        <p>We publish and sell books through our website. Product descriptions, prices, and availability may change without prior notice. All prices are displayed in Indian Rupees (₹).</p>
+        <p>We publish and sell books through our website. Product descriptions, prices, and availability may change
+            without prior notice. All prices are displayed in Indian Rupees (₹).</p>
         <h4 class="font-bold text-brand-900 mt-4">3. Orders & Payments</h4>
-        <p>Orders placed through WhatsApp are subject to acceptance. We reserve the right to cancel any order due to incorrect pricing, stock unavailability, or incomplete customer information. Payments must be completed before dispatch unless otherwise agreed.</p>
+        <p>Orders placed through WhatsApp are subject to acceptance. We reserve the right to cancel any order due to
+            incorrect pricing, stock unavailability, or incomplete customer information. Payments must be completed
+            before dispatch unless otherwise agreed.</p>
         <h4 class="font-bold text-brand-900 mt-4">4. Shipping</h4>
-        <p>Delivery timelines are estimates and may vary depending on courier services and location. We are not responsible for delays caused by courier companies or unforeseen circumstances.</p>
+        <p>Delivery timelines are estimates and may vary depending on courier services and location. We are not
+            responsible for delays caused by courier companies or unforeseen circumstances.</p>
         <h4 class="font-bold text-brand-900 mt-4">5. Intellectual Property</h4>
-        <p>All website content including text, images, book covers, logos, graphics, and designs is the intellectual property of Jagirdar Publications and may not be copied, reproduced, or distributed without prior written permission.</p>
+        <p>All website content including text, images, book covers, logos, graphics, and designs is the intellectual
+            property of Jagirdar Publications and may not be copied, reproduced, or distributed without prior written
+            permission.</p>
     </div>
 
     <div id="policy-refund" data-title="Refund & Return Policy" class="hidden">
         <p class="font-bold text-brand-900">Last Updated: July 2026</p>
         <p>Thank you for purchasing from Jagirdar Publications.</p>
         <h4 class="font-bold text-brand-900 mt-4">1. Books</h4>
-        <p>Due to the nature of printed books, all sales are generally final. Returns or refunds are accepted only under the following circumstances: Wrong book delivered, Damaged book received, Missing pages, Printing defect.</p>
+        <p>Due to the nature of printed books, all sales are generally final. Returns or refunds are accepted only under
+            the following circumstances: Wrong book delivered, Damaged book received, Missing pages, Printing defect.
+        </p>
         <h4 class="font-bold text-brand-900 mt-4">2. Reporting a Problem</h4>
-        <p>Customers must contact us within 48 hours of receiving the order. Please provide: Order details, Photographs of the package, Photographs of the damaged or defective book.</p>
+        <p>Customers must contact us within 48 hours of receiving the order. Please provide: Order details, Photographs
+            of the package, Photographs of the damaged or defective book.</p>
         <h4 class="font-bold text-brand-900 mt-4">3. Replacement & Refund Processing</h4>
-        <p>After verification, we may replace the book at no additional cost, or issue a refund where replacement is not possible. Approved refunds will be processed to the original payment method within 7–10 business days.</p>
+        <p>After verification, we may replace the book at no additional cost, or issue a refund where replacement is not
+            possible. Approved refunds will be processed to the original payment method within 7–10 business days.</p>
         <h4 class="font-bold text-brand-900 mt-4">4. Non-Returnable Items</h4>
-        <p>Refunds or returns are not available for: Change of mind, Incorrect address provided by the customer, Orders refused by the customer, Minor color variations due to printing or screen display.</p>
+        <p>Refunds or returns are not available for: Change of mind, Incorrect address provided by the customer, Orders
+            refused by the customer, Minor color variations due to printing or screen display.</p>
         <h4 class="font-bold text-brand-900 mt-4">5. Shipping Charges</h4>
         <p>Shipping charges are non-refundable unless the error is caused by Jagirdar Publications.</p>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            
+
             const getAuth = () => {
                 try {
-                    return JSON.parse(sessionStorage.getItem('bookAuth') || 'null');
+                    return JSON.parse(sessionStorage.getItem('bookAuth') || localStorage.getItem('bookAuth') || 'null');
                 } catch (e) {
                     return null;
                 }
@@ -743,16 +1078,17 @@
                 const authLinks = document.querySelectorAll('.auth-required');
 
                 if (loginLink) {
-                    loginLink.innerHTML = auth 
-                        ? `<i class="fa-solid fa-circle-user text-base text-brand-800"></i><span>Hello, ${auth.name || 'User'}</span>` 
-                        : `<i class="fa-solid fa-circle-user text-base text-brand-800"></i><span>Login</span>`;
+                    const firstName = auth && auth.name ? auth.name.trim().split(' ')[0] : null;
+                    loginLink.innerHTML = auth
+                        ? `<i class="fa-solid fa-circle-user text-sm sm:text-base text-brand-800 shrink-0"></i><span class="truncate">${firstName || 'Account'}</span>`
+                        : `<i class="fa-solid fa-circle-user text-sm sm:text-base text-brand-800 shrink-0"></i><span class="truncate">Login / Signup</span>`;
                     loginLink.href = auth ? 'account.html' : 'login.html';
                 }
 
                 if (mobileLoginLink) {
-                    mobileLoginLink.innerHTML = auth 
-                        ? `<i class="fa-solid fa-circle-user text-base text-brand-800 mr-2"></i><span>Hello, ${auth.name || 'User'}</span>` 
-                        : `<i class="fa-solid fa-circle-user text-base text-brand-800 mr-2"></i><span>Login</span>`;
+                    mobileLoginLink.innerHTML = auth
+                        ? `<i class="fa-solid fa-circle-user text-base text-brand-800 mr-2"></i><span>Hello, ${auth.name || 'User'}</span>`
+                        : `<i class="fa-solid fa-circle-user text-base text-brand-800 mr-2"></i><span>Login / Signup</span>`;
                     mobileLoginLink.href = auth ? 'account.html' : 'login.html';
                 }
 
@@ -769,7 +1105,7 @@
                                     loginLink.innerHTML += `<span class="absolute -top-1 -right-1 flex h-3.5 w-3.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-600 border-2 border-white shadow-sm"></span></span>`;
                                 }
                             }
-                        }).catch(e => {});
+                        }).catch(e => { });
                     }
                 }
 
@@ -792,12 +1128,12 @@
             };
 
             updateAuthUI();
-            
+
             // 1. Mobile Menu Toggle
             const mobileBtn = document.getElementById('mobile-menu-btn');
             const mobileMenu = document.getElementById('mobile-menu');
             const mobileLinks = document.querySelectorAll('.mobile-link');
-            
+
             mobileBtn.addEventListener('click', () => {
                 const isHidden = mobileMenu.classList.contains('hidden');
                 mobileMenu.classList.toggle('hidden', !isHidden);
@@ -821,7 +1157,7 @@
                     }
                 });
             }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-            
+
             revealElements.forEach(el => revealObserver.observe(el));
 
             // 3. Header Scroll Effect
@@ -834,31 +1170,31 @@
                     header.classList.remove('shadow-md', 'bg-brand-50/95');
                     header.classList.add('bg-brand-50/80');
                 }
-            }, {passive: true});
+            }, { passive: true });
 
             // 4. Book Flip on Click/Hold (Fixed for Mobile Origin)
             const heroBook = document.getElementById('hero-book');
             const bookWrapper = document.getElementById('book-wrapper');
-            
+
             if (heroBook && bookWrapper) {
-                const flipBook = (e) => { 
+                const flipBook = (e) => {
                     // only prevent default for mouse, allow standard touch behavior partially if needed, but safe here
-                    if(e.type !== 'touchstart') e.preventDefault(); 
-                    bookWrapper.classList.add('is-flipped'); 
+                    if (e.type !== 'touchstart') e.preventDefault();
+                    bookWrapper.classList.add('is-flipped');
                 };
-                const unflipBook = () => { 
-                    bookWrapper.classList.remove('is-flipped'); 
+                const unflipBook = () => {
+                    bookWrapper.classList.remove('is-flipped');
                 };
-                
+
                 // Mouse Events
                 heroBook.addEventListener('mousedown', flipBook);
                 window.addEventListener('mouseup', unflipBook);
                 heroBook.addEventListener('mouseleave', unflipBook);
-                
+
                 // Touch Events
-                heroBook.addEventListener('touchstart', flipBook, {passive: true});
-                window.addEventListener('touchend', unflipBook, {passive: true});
-                window.addEventListener('touchcancel', unflipBook, {passive: true});
+                heroBook.addEventListener('touchstart', flipBook, { passive: true });
+                window.addEventListener('touchend', unflipBook, { passive: true });
+                window.addEventListener('touchcancel', unflipBook, { passive: true });
             }
 
             // 5. FAQ Accordion (Strict max-height control)
@@ -866,13 +1202,13 @@
             faqItems.forEach(item => {
                 const btn = item.querySelector('button');
                 const content = item.querySelector('.faq-content');
-                
+
                 // Ensure initial state is hidden properly
                 content.style.maxHeight = '0px';
-                
+
                 btn.addEventListener('click', () => {
                     const isOpen = item.classList.contains('active');
-                    
+
                     // Close all others
                     faqItems.forEach(otherItem => {
                         otherItem.classList.remove('active');
@@ -893,7 +1229,7 @@
             const carouselItems = document.querySelectorAll('.carousel-item');
             const btnPrev = document.getElementById('car-prev');
             const btnNext = document.getElementById('car-next');
-            
+
             let currentIndex = 0;
             const totalItems = carouselItems.length;
             let autoSlideInterval;
@@ -902,8 +1238,8 @@
                 carouselItems.forEach((item, i) => {
                     let offset = i - currentIndex;
                     // Handle infinite wrap around
-                    if (offset < -Math.floor(totalItems/2)) offset += totalItems;
-                    if (offset > Math.floor(totalItems/2)) offset -= totalItems;
+                    if (offset < -Math.floor(totalItems / 2)) offset += totalItems;
+                    if (offset > Math.floor(totalItems / 2)) offset -= totalItems;
 
                     // Apply Transforms based on position
                     if (offset === 0) {
@@ -940,7 +1276,7 @@
                 currentIndex = (currentIndex - 1 + totalItems) % totalItems;
                 updateCarousel();
             };
-            
+
             const resetAutoSlide = () => {
                 clearInterval(autoSlideInterval);
                 autoSlideInterval = setInterval(nextSlide, 3000); // 3 seconds auto-slide
@@ -954,18 +1290,38 @@
                 btnNext.addEventListener('click', () => { nextSlide(); resetAutoSlide(); });
                 btnPrev.addEventListener('click', () => { prevSlide(); resetAutoSlide(); });
 
-                // Click Image directly to bring to center or open lightbox
+                // Click Image or Video directly to bring to center or open lightbox
                 const lightbox = document.getElementById('lightbox');
                 const lbImg = document.getElementById('lb-img');
+                const lbVideo = document.getElementById('lb-video');
                 const lbClose = document.getElementById('lb-close');
 
                 carouselItems.forEach((item, i) => {
                     item.addEventListener('click', () => {
                         if (i === currentIndex) {
                             // Open Lightbox
-                            const imgSrc = item.querySelector('img').src;
-                            lbImg.src = imgSrc;
+                            const imgEl = item.querySelector('img');
+                            const videoEl = item.querySelector('video');
+
+                            if (videoEl) {
+                                if (lbImg) lbImg.classList.add('hidden');
+                                if (lbVideo) {
+                                    lbVideo.src = videoEl.src;
+                                    lbVideo.classList.remove('hidden');
+                                    lbVideo.play();
+                                }
+                            } else if (imgEl) {
+                                if (lbVideo) {
+                                    lbVideo.pause();
+                                    lbVideo.classList.add('hidden');
+                                }
+                                if (lbImg) {
+                                    lbImg.src = imgEl.src;
+                                    lbImg.classList.remove('hidden');
+                                }
+                            }
                             lightbox.classList.remove('hidden');
+                            lightbox.classList.add('flex');
                             clearInterval(autoSlideInterval); // pause while open
                         } else {
                             // Bring to center
@@ -976,33 +1332,44 @@
                     });
                 });
 
-                // Close Lightbox
-                lbClose.addEventListener('click', () => {
+                const closeLightbox = () => {
                     lightbox.classList.add('hidden');
-                    resetAutoSlide();
-                });
-                lightbox.addEventListener('click', (e) => {
-                    if (e.target === lightbox) {
-                        lightbox.classList.add('hidden');
-                        resetAutoSlide();
+                    lightbox.classList.remove('flex');
+                    if (lbVideo) {
+                        lbVideo.pause();
+                        lbVideo.src = '';
+                        lbVideo.classList.add('hidden');
                     }
-                });
+                    if (lbImg) {
+                        lbImg.classList.add('hidden');
+                    }
+                    resetAutoSlide();
+                };
+
+                if (lbClose) lbClose.addEventListener('click', closeLightbox);
+                if (lightbox) {
+                    lightbox.addEventListener('click', (e) => {
+                        if (e.target === lightbox) {
+                            closeLightbox();
+                        }
+                    });
+                }
 
                 // Touch Swipe for Carousel
                 let touchStartX = 0;
                 const carouselContainer = document.getElementById('image-carousel');
-                
+
                 carouselContainer.addEventListener('touchstart', e => {
                     touchStartX = e.changedTouches[0].screenX;
                     clearInterval(autoSlideInterval);
-                }, {passive: true});
-                
+                }, { passive: true });
+
                 carouselContainer.addEventListener('touchend', e => {
                     const touchEndX = e.changedTouches[0].screenX;
                     if (touchEndX < touchStartX - 40) nextSlide(); // Swipe left
                     if (touchEndX > touchStartX + 40) prevSlide(); // Swipe right
                     resetAutoSlide();
-                }, {passive: true});
+                }, { passive: true });
             }
 
             // 7. Policy Modals Logic
@@ -1011,20 +1378,20 @@
             const policyTitle = document.getElementById('policy-title');
             const policyBody = document.getElementById('policy-body');
             const closePolicyBtns = document.querySelectorAll('.close-policy');
-            
+
             document.querySelectorAll('.policy-trigger').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.preventDefault();
                     const policyId = btn.getAttribute('data-policy');
                     const contentSrc = document.getElementById(policyId);
-                    
-                    if(contentSrc) {
+
+                    if (contentSrc) {
                         policyTitle.innerText = contentSrc.getAttribute('data-title');
                         policyBody.innerHTML = contentSrc.innerHTML;
-                        
+
                         policyModal.classList.remove('hidden');
                         policyModal.classList.add('flex'); // explicitly set flex
-                        
+
                         // slight delay for smooth transition
                         setTimeout(() => {
                             policyModal.classList.remove('opacity-0');
@@ -1035,7 +1402,7 @@
                     }
                 });
             });
-            
+
             const closePolicyModal = () => {
                 policyModal.classList.add('opacity-0');
                 policyModalContent.classList.remove('scale-100');
@@ -1046,7 +1413,7 @@
                     document.body.style.overflow = '';
                 }, 300);
             };
-            
+
             closePolicyBtns.forEach(btn => btn.addEventListener('click', closePolicyModal));
             policyModal.addEventListener('click', (e) => {
                 // close if clicked outside the white box
@@ -1061,7 +1428,7 @@
             const waForm = document.getElementById('wa-order-form');
             const waQtyInput = document.getElementById('wa-qty');
             const waTotalAmount = document.getElementById('wa-total-amount');
-            const BOOK_PRICE = 399;
+            let BOOK_PRICE = 399;
             const WA_NUMBER = "919904499394";
 
             if (openWaModalBtn) {
@@ -1117,40 +1484,60 @@
                     const total = qty * BOOK_PRICE;
 
                     const message = `Hello Jagirdar Publications, I would like to Pre-Order the book 'ब्रह्मांशावतार श्री खेतेश्वर दाता'.\n\nName: ${name}\nMobile: ${mobile}\nAddress: ${address}\nQuantity: ${qty}\nTotal Amount: ₹${total}`;
-                    
+
                     const encodedMessage = encodeURIComponent(message);
                     const waUrl = `https://wa.me/${WA_NUMBER}?text=${encodedMessage}`;
-                    
+
                     window.open(waUrl, '_blank');
                     closeWaModal();
                 });
             }
-            
-            // 9. Fetch Settings for Order Now button
+
+            // 9. Fetch Settings for Order Now button and dynamic book price
             async function fetchFrontendSettings() {
                 try {
-                    const res = await fetch('https://jagirdar.vercel.app/api/settings/frontend');
+                    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                    const res = await fetch(`${API_BASE}/api/settings/frontend`);
                     const data = await res.json();
-                    
-                    if (data.success && data.settings && data.settings.isOrderNowEnabled === true) {
-                        const orderNowBtns = document.querySelectorAll('.order-now-btn');
-                        orderNowBtns.forEach(btn => {
-                            btn.classList.remove('order-now-btn'); // Remove class so default tailwind display takes over
-                        });
-                        const notice = document.getElementById('website-order-notice');
-                        if (notice) notice.style.display = 'none';
+
+                    if (data.success && data.settings) {
+                        if (data.settings.isOrderNowEnabled === true) {
+                            const orderNowBtns = document.querySelectorAll('.order-now-btn');
+                            orderNowBtns.forEach(btn => {
+                                btn.classList.remove('order-now-btn'); // Remove class so default tailwind display takes over
+                            });
+                            const notice = document.getElementById('website-order-notice');
+                            if (notice) notice.style.display = 'none';
+                        }
+                        if (data.settings.bookPrice !== undefined) {
+                            BOOK_PRICE = parseInt(data.settings.bookPrice, 10) || 399;
+                            const heroPrice = document.getElementById('hero-book-price');
+                            const footerPrice = document.getElementById('footer-book-price');
+                            if (heroPrice) heroPrice.textContent = `₹${BOOK_PRICE}`;
+                            if (footerPrice) footerPrice.textContent = `₹${BOOK_PRICE}`;
+                            if (waTotalAmount) {
+                                const qty = parseInt(waQtyInput?.value || 1, 10);
+                                waTotalAmount.textContent = `₹${qty * BOOK_PRICE}`;
+                            }
+                        }
                     }
                 } catch (error) {
                     console.error('Error fetching frontend settings:', error);
                 }
             }
-            
+
             fetchFrontendSettings();
 
         });
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+            }
+        });
     </script>
 </body>
+
 </html>
-
-
-

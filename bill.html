@@ -146,7 +146,14 @@
         const errorMsg = document.getElementById('error-msg');
         const content = document.getElementById('invoice-content');
 
-        const getToken = () => sessionStorage.getItem('adminToken') || localStorage.getItem('bookAuthToken') || sessionStorage.getItem('bookAuthToken');
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+
+        const getToken = () => 
+            sessionStorage.getItem('adminToken') || 
+            localStorage.getItem('bookAuthToken') || 
+            sessionStorage.getItem('bookAuthToken') || 
+            localStorage.getItem('token') || 
+            sessionStorage.getItem('token');
 
         async function fetchInvoice() {
             if (!orderId) {
@@ -156,10 +163,10 @@
 
             const token = getToken();
             
-            // 1. Try to fetch from API if user is logged in
+            // 1. Try to fetch from User/Admin Authenticated API if token exists
             if (token) {
                 try {
-                    const res = await fetch(`https://jagirdar.vercel.app/api/orders/${orderId}`, {
+                    const res = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const data = await res.json();
@@ -169,11 +176,23 @@
                         return;
                     }
                 } catch (err) {
-                    console.error("Backend fetch failed", err);
+                    console.warn("Backend auth fetch failed, attempting public fallback", err);
                 }
             }
 
-            // 2. Fallback to Guest Orders (Checking both session and local storage)
+            // 2. Try Public Order API fallback (allows fetching invoice by valid order ID)
+            try {
+                const pubRes = await fetch(`${API_BASE}/api/orders/${encodeURIComponent(orderId)}/public`);
+                const pubData = await pubRes.json();
+                if (pubData.success && pubData.order) {
+                    renderInvoice(pubData.order);
+                    return;
+                }
+            } catch (err) {
+                console.warn("Public API fetch failed, trying local storage", err);
+            }
+
+            // 3. Fallback to Guest Orders (Checking both session and local storage)
             try {
                 const sessionOrders = JSON.parse(sessionStorage.getItem('bookOrders') || '[]');
                 const localOrders = JSON.parse(localStorage.getItem('bookOrders') || '[]');
@@ -186,38 +205,102 @@
                 }
             } catch (e) {}
 
-            // 3. Error state if both failed
-            showError("Invoice not found or you are not authorized to view it.");
+            // 4. Error state if all fail
+            showError("Invoice not found or could not be loaded. Please check your Order ID.");
         }
 
+        const CONFIRMED_PAID_STATUSES = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'];
+
         function renderInvoice(o) {
-            loading.classList.add('hidden');
-            content.classList.remove('hidden');
+            try {
+                const status = String(o.status || '').toUpperCase();
+                const isPaid = CONFIRMED_PAID_STATUSES.includes(status);
 
-            document.getElementById('b-name').textContent = o.shipping_name || 'Customer';
-            document.getElementById('b-address').textContent = o.shipping_address || 'N/A';
-            document.getElementById('b-city-pin').textContent = `${o.shipping_city ? o.shipping_city + ' - ' : ''}${o.shipping_pincode || ''}`;
-            document.getElementById('b-mobile').textContent = `+91 ${o.shipping_mobile || 'N/A'}`;
-            
-            document.getElementById('b-order-id').textContent = `#${o.id}`;
-            document.getElementById('b-date').textContent = new Date(o.created_at).toLocaleString();
-            let paySource = o.payment_method || 'UPI';
-            if (paySource.toLowerCase().includes('razorpay')) paySource = 'Prepaid';
-            if (paySource.toLowerCase().includes('cod') || paySource.toLowerCase().includes('cash')) paySource = 'Cash on Delivery';
-            document.getElementById('b-payment-method').textContent = paySource;
-            document.getElementById('b-txn').textContent = o.transaction_id || o.razorpay_payment_id || o.utr || 'N/A';
+                if (!isPaid) {
+                    showUnpaidNotice(o);
+                    return;
+                }
 
-            document.getElementById('b-item-name').textContent = o.book_title || 'Book Title';
-            document.getElementById('b-qty').textContent = o.quantity;
-            document.getElementById('b-unit-price').textContent = `₹${o.unit_price}`;
-            document.getElementById('b-item-total').textContent = `₹${o.unit_price * o.quantity}`;
+                loading.classList.add('hidden');
+                content.classList.remove('hidden');
 
-            if (o.discount_amount > 0) {
-                document.getElementById('b-discount-row').classList.remove('hidden');
-                document.getElementById('b-discount').textContent = `-₹${o.discount_amount}`;
+                document.getElementById('b-name').textContent = o.shipping_name || 'Customer';
+                document.getElementById('b-address').textContent = o.shipping_address || 'N/A';
+                document.getElementById('b-city-pin').textContent = `${o.shipping_city ? o.shipping_city + ' - ' : ''}${o.shipping_pincode || ''}`;
+                document.getElementById('b-mobile').textContent = `+91 ${o.shipping_mobile || 'N/A'}`;
+                
+                document.getElementById('b-order-id').textContent = `#${o.id}`;
+                
+                let formattedDate = new Date().toLocaleString();
+                if (o.created_at) {
+                    const parsedDate = new Date(o.created_at);
+                    if (!isNaN(parsedDate.getTime())) {
+                        formattedDate = parsedDate.toLocaleString();
+                    }
+                }
+                document.getElementById('b-date').textContent = formattedDate;
+
+                let paySource = o.payment_method || 'UPI';
+                const lowerPay = String(paySource).toLowerCase();
+                if (lowerPay.includes('razorpay')) paySource = 'Prepaid Online';
+                else if (lowerPay.includes('cod') || lowerPay.includes('cash')) paySource = 'Cash on Delivery';
+                document.getElementById('b-payment-method').textContent = paySource;
+                
+                document.getElementById('b-txn').textContent = o.transaction_id || o.razorpay_payment_id || o.utr || 'N/A';
+
+                document.getElementById('b-item-name').textContent = o.book_title || 'ब्रह्मांशावतार श्री खेतेश्वर दाता';
+                const qty = parseInt(o.quantity || 1, 10);
+                const unitPrice = parseInt(o.unit_price || 399, 10);
+                const discount = parseInt(o.discount_amount || 0, 10);
+                const total = o.total_amount !== undefined ? parseInt(o.total_amount, 10) : (unitPrice * qty - discount);
+
+                document.getElementById('b-qty').textContent = qty;
+                document.getElementById('b-unit-price').textContent = `₹${unitPrice}`;
+                document.getElementById('b-item-total').textContent = `₹${unitPrice * qty}`;
+
+                if (discount > 0) {
+                    document.getElementById('b-discount-row').classList.remove('hidden');
+                    document.getElementById('b-discount').textContent = `-₹${discount}`;
+                } else {
+                    document.getElementById('b-discount-row').classList.add('hidden');
+                }
+
+                document.getElementById('b-grand-total').textContent = `₹${total}`;
+            } catch (err) {
+                console.error("Error rendering invoice:", err);
+                showError("Failed to display invoice details.");
             }
+        }
 
-            document.getElementById('b-grand-total').textContent = `₹${o.total_amount}`;
+        function showUnpaidNotice(o) {
+            loading.classList.add('hidden');
+            errorDiv.classList.remove('hidden');
+            const statusStr = o.status || 'UNPAID / PENDING';
+            if (statusStr === 'CANCELLED') {
+                errorMsg.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="text-3xl text-red-500"><i class="fa-solid fa-ban"></i></div>
+                        <h3 class="text-lg font-bold text-slate-800">Order Cancelled</h3>
+                        <p class="text-sm text-slate-600">Official tax invoices cannot be generated for cancelled orders (Order ID: #${o.id}).</p>
+                    </div>
+                `;
+            } else {
+                errorMsg.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="text-3xl text-amber-500"><i class="fa-solid fa-shield-halved"></i></div>
+                        <h3 class="text-lg font-bold text-slate-800">Official Bill Locked & Pending Payment Verification</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
+                            Official tax invoices and bills are only generated <strong>after payment verification is completed</strong>. 
+                            <br>Current Order Status: <span class="font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg border border-amber-200">${statusStr}</span>
+                        </p>
+                        <div class="pt-2">
+                            <a href="order-confirm.html?orderId=${encodeURIComponent(o.id)}" class="inline-block px-5 py-2.5 bg-brand-800 hover:bg-brand-900 text-white font-bold text-xs rounded-xl shadow transition">
+                                Check Order Status / Complete Payment
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function showError(msg) {
@@ -227,6 +310,14 @@
         }
 
         fetchInvoice();
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+            }
+        });
     </script>
 </body>
 </html>

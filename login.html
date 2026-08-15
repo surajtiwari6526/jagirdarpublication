@@ -60,6 +60,13 @@
                     <input id="password" name="password" type="password" placeholder="Enter your password" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required>
                 </div>
 
+                <div class="flex items-center justify-between text-xs sm:text-sm">
+                    <label class="flex items-center cursor-pointer text-brand-900 font-semibold select-none">
+                        <input type="checkbox" id="remember-me" class="rounded border-gray-300 text-brand-800 focus:ring-brand-500 h-4 w-4 mr-2 accent-brand-800" checked>
+                        Remember Me
+                    </label>
+                </div>
+
                 <button id="login-btn" type="submit" class="w-full rounded-xl bg-brand-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-900 shadow-md">
                     Login
                 </button>
@@ -198,10 +205,17 @@
 
                 const params = new URLSearchParams(window.location.search);
                 const redirect = params.get('redirect') || 'index.html';
+                const rememberMe = document.getElementById('remember-me')?.checked ?? true;
 
                 sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                if (rememberMe) {
+                    localStorage.setItem('bookAuth', JSON.stringify(data.user));
+                } else {
+                    localStorage.removeItem('bookAuth');
+                }
                 if (data.token) {
                     localStorage.setItem('bookAuthToken', data.token);
+                    sessionStorage.setItem('bookAuthToken', data.token);
                 }
 
                 showStatus('🎉 Login Successful!', 'success');
@@ -247,8 +261,18 @@
 
                     const params = new URLSearchParams(window.location.search);
                     const redirect = params.get('redirect') || 'index.html';
+                    const rememberMe = document.getElementById('remember-me')?.checked ?? true;
+
                     sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
-                    if (data.token) localStorage.setItem('bookAuthToken', data.token);
+                    if (rememberMe) {
+                        localStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    } else {
+                        localStorage.removeItem('bookAuth');
+                    }
+                    if (data.token) {
+                        localStorage.setItem('bookAuthToken', data.token);
+                        sessionStorage.setItem('bookAuthToken', data.token);
+                    }
 
                     showStatus('✅ Login Successful!', 'success');
                     setTimeout(() => { window.location.href = redirect; }, 800);
@@ -351,8 +375,18 @@
 
                     const params = new URLSearchParams(window.location.search);
                     const redirect = params.get('redirect') || 'index.html';
+                    const rememberMe = document.getElementById('remember-me')?.checked ?? true;
+
                     sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
-                    if (data.token) localStorage.setItem('bookAuthToken', data.token);
+                    if (rememberMe) {
+                        localStorage.setItem('bookAuth', JSON.stringify(data.user));
+                    } else {
+                        localStorage.removeItem('bookAuth');
+                    }
+                    if (data.token) {
+                        localStorage.setItem('bookAuthToken', data.token);
+                        sessionStorage.setItem('bookAuthToken', data.token);
+                    }
 
                     gModal.innerHTML = '<div class="p-6 text-center"><p class="text-emerald-600 font-bold mb-2">✅ Signup Complete!</p><p class="text-xs text-slate-500">Redirecting...</p></div>';
                     setTimeout(() => { window.location.href = redirect; }, 800);
@@ -362,6 +396,14 @@
                     btn.innerHTML = 'Verify & Complete';
                     btn.disabled = false;
                 }
+            }
+        });
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
             }
         });
     </script>

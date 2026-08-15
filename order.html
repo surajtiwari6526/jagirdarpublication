@@ -45,7 +45,7 @@
                     <div class="mt-6 rounded-2xl border border-brand-200 bg-brand-50 p-4">
                         <div class="flex items-center justify-between">
                             <span class="text-lg font-semibold text-brand-900">Price</span>
-                            <span class="text-2xl font-bold text-brand-800">₹399</span>
+                            <span id="book-price-display" class="text-2xl font-bold text-brand-800">₹399</span>
                         </div>
                     </div>
 
@@ -78,7 +78,7 @@
 
         const getAuth = () => {
             try {
-                return JSON.parse(sessionStorage.getItem('bookAuth') || 'null');
+                return JSON.parse(sessionStorage.getItem('bookAuth') || localStorage.getItem('bookAuth') || 'null');
             } catch (e) {
                 return null;
             }
@@ -109,14 +109,19 @@
             window.location.href = 'address.html';
         });
 
-        // Redirect if order online is disabled
+        // Redirect if order online is disabled & fetch store settings
         async function checkSettings() {
             try {
-                const res = await fetch('https://jagirdar.vercel.app/api/settings/frontend');
+                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                const res = await fetch(`${API_BASE}/api/settings/frontend`);
                 const data = await res.json();
                 if (!data.success || !data.settings || data.settings.isOrderNowEnabled !== true) {
                     window.location.href = 'index.html';
                 } else {
+                    if (data.settings.bookPrice !== undefined) {
+                        const priceDisplay = document.getElementById('book-price-display');
+                        if (priceDisplay) priceDisplay.textContent = `₹${data.settings.bookPrice}`;
+                    }
                     document.getElementById('main-body').style.display = 'block';
                 }
             } catch (err) {
@@ -124,6 +129,14 @@
             }
         }
         checkSettings();
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+            }
+        });
     </script>
 </body>
 </html>

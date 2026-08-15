@@ -318,7 +318,7 @@
 
         const getAuth = () => {
             try {
-                return JSON.parse(sessionStorage.getItem('bookAuth')) || null;
+                return JSON.parse(sessionStorage.getItem('bookAuth') || localStorage.getItem('bookAuth') || 'null');
             } catch (e) {
                 return null;
             }
@@ -430,6 +430,9 @@
                     const data = await res.json();
                     if (res.ok && data.success && data.user) {
                         sessionStorage.setItem('bookAuth', JSON.stringify(data.user));
+                        if (localStorage.getItem('bookAuth')) {
+                            localStorage.setItem('bookAuth', JSON.stringify(data.user));
+                        }
                     }
                 } catch (err) {
                     console.error('Failed to fetch latest profile:', err);
@@ -674,6 +677,10 @@
                     const data = await res.json();
                     if (data.success && data.orders) {
                         orders = data.orders;
+                        try {
+                            sessionStorage.setItem('bookOrders', JSON.stringify(orders));
+                            localStorage.setItem('bookOrders', JSON.stringify(orders));
+                        } catch (e) {}
                     }
                 } catch (e) {}
             }
@@ -684,7 +691,8 @@
                 } catch (e) {}
             }
 
-            if (orderBadge) orderBadge.textContent = orders.length.toString();
+            const confirmedOrders = orders.filter(o => ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(o.status));
+            if (orderBadge) orderBadge.textContent = confirmedOrders.length.toString();
 
             if (!ordersContainer) return;
 
@@ -703,7 +711,10 @@
             ordersContainer.innerHTML = orders.map(o => {
                 const s = o.status;
                 const isCancelled = s === 'CANCELLED';
-                const step1 = !isCancelled;
+                const isPending = s === 'PENDING';
+                const isConfirmed = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(s);
+                
+                const step1 = isConfirmed;
                 const step2 = ['PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(s);
                 const step3 = ['IN_TRANSIT', 'DELIVERED'].includes(s);
                 const step4 = s === 'DELIVERED';
@@ -728,7 +739,7 @@
                 };
 
                 return `
-                <div class="rounded-3xl border border-brand-200 bg-white p-6 hover:shadow-lg transition duration-300 overflow-hidden relative">
+                <div class="rounded-3xl border ${isPending ? 'border-amber-300 bg-amber-50/20' : 'border-brand-200 bg-white'} p-6 hover:shadow-lg transition duration-300 overflow-hidden relative">
                     <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-brand-100">
                         <div>
                             <span class="text-xs font-bold uppercase tracking-wider text-brand-600">Order ID: #${o.id}</span>
@@ -736,13 +747,13 @@
                         </div>
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
                             s === 'DELIVERED' || s === 'Delivered' ? 'bg-emerald-100 text-emerald-800' : 
-                            (isCancelled ? 'bg-red-100 text-red-800' : (s === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'))
+                            (isCancelled ? 'bg-red-100 text-red-800' : (s === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' : (isPending ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-amber-100 text-amber-800')))
                         } gap-1.5 shadow-sm">
                             <span class="h-2 w-2 rounded-full ${
                                 s === 'DELIVERED' || s === 'Delivered' ? 'bg-emerald-500' : 
                                 (isCancelled ? 'bg-red-500' : (s === 'IN_TRANSIT' ? 'bg-blue-500' : 'bg-amber-500'))
                             }"></span>
-                            ${s === 'IN_TRANSIT' ? 'SHIPPED' : s}
+                            ${s === 'IN_TRANSIT' ? 'SHIPPED' : (isPending ? 'UNPAID / PENDING' : s)}
                         </span>
                     </div>
 
@@ -760,7 +771,7 @@
                         </div>
                     </div>
 
-                    <!-- Order Progress Tracker -->
+                    <!-- Order Progress Tracker / Pending Status -->
                     ${isCancelled ? `
                         <div class="mt-2 p-3 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-3">
                             <div class="h-8 w-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0"><i class="fa-solid fa-xmark"></i></div>
@@ -768,6 +779,21 @@
                                 <p class="text-sm font-bold text-red-800">Order Cancelled</p>
                                 <p class="text-xs text-red-600 mt-0.5">This order has been cancelled and will not be delivered.</p>
                             </div>
+                        </div>
+                    ` : (isPending ? `
+                        <div class="mt-2 p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="h-9 w-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 font-bold">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-amber-900">Payment Pending (Unconfirmed Order)</p>
+                                    <p class="text-xs text-amber-700 mt-0.5">Razorpay payment was not completed or verified. Order will NOT be shipped until payment is completed.</p>
+                                </div>
+                            </div>
+                            <a href="summary.html" class="shrink-0 px-4 py-2 bg-brand-800 hover:bg-brand-900 text-white font-bold text-xs rounded-xl transition shadow flex items-center gap-1.5">
+                                <i class="fa-solid fa-credit-card"></i> Pay via Razorpay
+                            </a>
                         </div>
                     ` : `
                         <div class="mt-2 pt-6 pb-2 relative px-2 sm:px-8">
@@ -781,13 +807,13 @@
                                 ${renderStep('Delivered', 'fa-house-circle-check', step4)}
                             </div>
                         </div>
-                    `}
+                    `)}
 
                     <div class="mt-4 pt-4 border-t border-brand-100 flex flex-wrap items-center justify-between gap-4 text-xs bg-brand-50/50 -mx-6 px-6 py-4 transition-all" id="footer-${o.id}">
                         <span class="text-brand-700 font-medium flex items-center"><i class="fa-solid fa-truck-fast mr-1.5 text-brand-600"></i> Tracking ID: <strong class="text-brand-900 bg-white px-2 py-1 rounded border border-brand-200 ml-1">${(o.tracking_number && o.tracking_number !== o.id && o.tracking_number !== 'PENDING' && o.tracking_number !== 'Not Assigned') ? o.tracking_number : 'Your tracking id is in progress'}</strong></span>
                         <div class="flex items-center gap-3">
                             ${step4 ? '<span class="text-emerald-700 font-bold"><i class="fa-solid fa-check-circle mr-1"></i> Delivered</span>' : ''}
-                            <a href="bill.html?id=${o.id}" target="_blank" onclick="try{localStorage.setItem('bookOrders', sessionStorage.getItem('bookOrders') || '[]')}catch(e){}" class="text-brand-700 hover:text-white hover:bg-brand-800 font-bold flex items-center gap-1.5 transition px-3 py-1.5 bg-white border border-brand-200 rounded-lg shadow-sm hover:shadow"><i class="fa-solid fa-file-invoice"></i> View Bill</a>
+                            ${isConfirmed ? `<a href="bill.html?id=${o.id}" target="_blank" onclick="try{localStorage.setItem('bookOrders', sessionStorage.getItem('bookOrders') || '[]')}catch(e){}" class="text-brand-700 hover:text-white hover:bg-brand-800 font-bold flex items-center gap-1.5 transition px-3 py-1.5 bg-white border border-brand-200 rounded-lg shadow-sm hover:shadow"><i class="fa-solid fa-file-invoice"></i> View Bill</a>` : `<span class="text-[11px] font-bold text-amber-800 bg-amber-100/90 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1"><i class="fa-solid fa-shield-halved text-amber-600"></i> Bill Pending Payment</span>`}
                             <button onclick="toggleOrderDetails('${o.id}')" class="text-brand-800 hover:text-brand-900 font-bold flex items-center gap-1.5 transition px-3 py-1.5 bg-white border border-brand-200 rounded-lg shadow-sm hover:shadow">More Details <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300" id="chevron-${o.id}"></i></button>
                         </div>
                     </div>
@@ -1078,7 +1104,9 @@
 
                     // Success: clear session and redirect
                     sessionStorage.removeItem('bookAuth');
+                    localStorage.removeItem('bookAuth');
                     localStorage.removeItem('bookAuthToken');
+                    sessionStorage.removeItem('bookAuthToken');
                     alert("Your account has been deleted successfully.");
                     window.location.href = 'index.html';
                 } catch (err) {
@@ -1095,10 +1123,20 @@
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => {
                 sessionStorage.removeItem('bookAuth');
+                localStorage.removeItem('bookAuth');
                 localStorage.removeItem('bookAuthToken');
+                sessionStorage.removeItem('bookAuthToken');
                 window.location.href = 'index.html';
             });
         }
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
+            }
+        });
     </script>
 </body>
 </html>

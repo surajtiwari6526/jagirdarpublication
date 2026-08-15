@@ -242,6 +242,26 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- Book Price Management -->
+                <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-indian-rupee-sign text-emerald-600"></i> Book Price Management
+                        </h3>
+                        <p class="text-xs text-slate-500">Set the selling price of the book. Future order checkouts and invoice generations will automatically use this price.</p>
+                    </div>
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div class="relative flex-1 sm:flex-none">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold text-sm">₹</span>
+                            <input type="number" id="book-price-input" min="1" step="1" value="399" placeholder="399" 
+                                class="pl-7 pr-3 py-2 w-full sm:w-32 rounded-xl border border-slate-300 font-bold text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                        </div>
+                        <button type="button" id="save-price-btn" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-sm">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Price
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Panel 2: Orders Management Table & Search Engine -->
@@ -286,13 +306,13 @@
                             <label class="block font-bold text-slate-700 mb-1">Order Status</label>
                             <select id="order-status-filter"
                                 class="w-full px-3 py-2 rounded-xl border border-slate-300 outline-none focus:border-brand-800">
-                                <option value="ALL">All Statuses</option>
-                                <option value="PENDING">PENDING</option>
+                                <option value="ALL">All Valid Orders (Verified / Paid)</option>
                                 <option value="PAID">PAID</option>
                                 <option value="PROCESSING">PROCESSING</option>
+                                <option value="PENDING_VERIFICATION">PENDING_VERIFICATION (UPI Review)</option>
                                 <option value="IN_TRANSIT">IN_TRANSIT (Shipped)</option>
                                 <option value="DELIVERED">DELIVERED</option>
-                                <option value="CANCELLED">CANCELLED</option>
+                                <option value="UNPAID_ABANDONED">Unpaid / Abandoned Checkouts</option>
                             </select>
                         </div>
 
@@ -338,13 +358,12 @@
             <!-- Panel 3: Users Management Tab -->
             <div id="panel-users" class="adm-panel hidden space-y-6">
                 <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
-                    <div class="flex justify-between items-center">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h2 class="text-xl font-bold text-slate-900">Registered Users Management</h2>
-                            <p class="text-xs text-slate-500">View customer account details, orders count, and
-                                Block/Unblock permissions</p>
+                            <p class="text-xs text-slate-500">View customer profile data, delivery details, order history, and account permissions</p>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap gap-2">
                             <button id="refresh-users-btn"
                                 class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold text-slate-700 transition flex items-center">
                                 <i class="fa-solid fa-rotate-right mr-1"></i> Refresh Users
@@ -356,18 +375,61 @@
                         </div>
                     </div>
 
+                    <!-- User Stats Bar -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                            <p class="text-[10px] uppercase font-bold text-slate-500">Total Registered Users</p>
+                            <p id="user-stat-total" class="text-xl font-bold text-slate-900 mt-1">0</p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
+                            <p class="text-[10px] uppercase font-bold text-emerald-600">Active Accounts</p>
+                            <p id="user-stat-active" class="text-xl font-bold text-emerald-800 mt-1">0</p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-amber-50 border border-amber-100">
+                            <p class="text-[10px] uppercase font-bold text-amber-600">Blocked Accounts</p>
+                            <p id="user-stat-blocked" class="text-xl font-bold text-amber-800 mt-1">0</p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-brand-50 border border-brand-100">
+                            <p class="text-[10px] uppercase font-bold text-brand-600">Total User Revenue</p>
+                            <p id="user-stat-revenue" class="text-xl font-bold text-brand-900 mt-1">₹0</p>
+                        </div>
+                    </div>
+
+                    <!-- Search & Filters Toolbar -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <div class="relative flex-1 min-w-[240px]">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                            <input type="text" id="user-search-input" placeholder="Search by name, mobile, email, ID, or city..."
+                                class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-brand-800 font-medium">
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <select id="user-status-filter" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-800">
+                                <option value="ALL">All Statuses</option>
+                                <option value="ACTIVE">Active Only</option>
+                                <option value="BLOCKED">Blocked Only</option>
+                                <option value="DELETED">Deleted Only</option>
+                            </select>
+                            <select id="user-sort-select" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-brand-800">
+                                <option value="NEWEST">Joined (Newest First)</option>
+                                <option value="MOST_ORDERS">Most Orders</option>
+                                <option value="HIGHEST_SPENT">Highest Spent</option>
+                                <option value="NAME_ASC">Name (A-Z)</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs">
                             <thead class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-200">
                                 <tr>
-                                    <th class="p-3">User ID</th>
+                                    <th class="p-3">User ID & Joined</th>
                                     <th class="p-3">Customer Name</th>
                                     <th class="p-3">Mobile Number</th>
                                     <th class="p-3">Email Address</th>
                                     <th class="p-3">Total Orders</th>
                                     <th class="p-3">Total Spent</th>
-                                    <th class="p-3">Account Status</th>
-                                    <th class="p-3">Action</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="admin-users-table-body" class="divide-y divide-slate-100">
@@ -497,6 +559,7 @@
                                         <th class="p-3">Min Order</th>
                                         <th class="p-3">Assigned User</th>
                                         <th class="p-3">Status</th>
+                                        <th class="p-3">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="vouchers-table-body" class="divide-y divide-slate-100">
@@ -602,6 +665,21 @@
                     class="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white text-xs font-bold transition flex items-center justify-center gap-1">
                     <i class="fa-solid fa-download"></i> Download
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div id="user-details-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 shadow-2xl border border-slate-200 relative">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h3 class="font-bold text-base text-slate-900 flex items-center gap-2"><i class="fa-solid fa-id-card text-brand-800"></i> Customer Full Profile & History</h3>
+                <button onclick="document.getElementById('user-details-modal').classList.add('hidden')" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="user-details-modal-content" class="space-y-4">
+                <!-- User content dynamically injected -->
             </div>
         </div>
     </div>
@@ -827,19 +905,25 @@
             }
         }
 
-        // --- Online Orders Settings ---
+        // --- Online Orders & Store Settings ---
         const toggleOnlineOrders = document.getElementById('toggle-online-orders');
         const orderStatusText = document.getElementById('order-status-text');
+        const bookPriceInput = document.getElementById('book-price-input');
+        const savePriceBtn = document.getElementById('save-price-btn');
 
         async function fetchOnlineOrdersSettings() {
             try {
-                const res = await fetch('https://jagirdar.vercel.app/api/settings/frontend');
+                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                const res = await fetch(`${API_BASE}/api/settings/frontend`);
                 const data = await res.json();
                 if (data.success && data.settings) {
                     const isEnabled = data.settings.isOrderNowEnabled === true;
                     toggleOnlineOrders.checked = isEnabled;
                     orderStatusText.textContent = isEnabled ? 'Enabled' : 'Disabled';
                     orderStatusText.className = isEnabled ? 'text-xs font-bold text-emerald-600 uppercase tracking-wider' : 'text-xs font-bold text-red-600 uppercase tracking-wider';
+                    if (data.settings.bookPrice !== undefined && bookPriceInput) {
+                        bookPriceInput.value = data.settings.bookPrice;
+                    }
                 }
             } catch (err) {
                 console.error("Failed to fetch settings", err);
@@ -853,7 +937,8 @@
             orderStatusText.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider animate-pulse';
 
             try {
-                const res = await fetch('https://jagirdar.vercel.app/api/settings/frontend', {
+                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                const res = await fetch(`${API_BASE}/api/settings/frontend`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ isOrderNowEnabled: isEnabled })
@@ -875,6 +960,39 @@
             }
             toggleOnlineOrders.disabled = false;
         });
+
+        if (savePriceBtn) {
+            savePriceBtn.addEventListener('click', async () => {
+                const newPrice = parseInt(bookPriceInput.value, 10);
+                if (isNaN(newPrice) || newPrice < 1) {
+                    alert('Please enter a valid book price.');
+                    return;
+                }
+
+                savePriceBtn.disabled = true;
+                savePriceBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+                try {
+                    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                    const res = await fetch(`${API_BASE}/api/settings/frontend`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ bookPrice: newPrice })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        alert(`Book price updated successfully to ₹${newPrice}!`);
+                    } else {
+                        throw new Error(data.error || "Update failed");
+                    }
+                } catch (err) {
+                    console.error("Failed to update book price", err);
+                    alert('Failed to update book price. Please try again.');
+                }
+                savePriceBtn.disabled = false;
+                savePriceBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Price';
+            });
+        }
 
         // --- Admin Management (Super Admin) ---
         async function fetchAdminsList() {
@@ -1049,16 +1167,18 @@
                             <td class="p-3 font-medium text-slate-600">${o.payment_method}</td>
                             <td class="p-3 font-mono text-[10px] text-slate-500">${o.razorpay_payment_id || 'N/A'}</td>
                             <td class="p-3">
-                                ${o.status === 'PAID' || o.status === 'PENDING' ? `
+                                ${['PAID', 'PROCESSING'].includes(o.status) ? `
                                     <button class="px-3 py-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-full hover:bg-amber-600 transition shadow-sm ship-action-btn flex items-center gap-1" data-id="${o.id}">
                                         <i class="fa-solid fa-truck-fast"></i> Ship Now
                                     </button>
                                 ` : `
                                     <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                        o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' :
-                                        o.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
+                                        o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                        o.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                                        o.status === 'PENDING_VERIFICATION' ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' :
+                                        o.status === 'PENDING' ? 'bg-red-50 text-red-700 border border-red-200' :
                                         'bg-slate-100 text-slate-700'
-                                    }">${o.status === 'IN_TRANSIT' ? 'SHIPPED' : o.status}</span>
+                                    }">${o.status === 'IN_TRANSIT' ? 'SHIPPED' : (o.status === 'PENDING_VERIFICATION' ? 'UPI REVIEW PENDING' : (o.status === 'PENDING' ? 'UNPAID' : o.status))}</span>
                                 `}
                             </td>
                             <td class="p-3">
@@ -1230,13 +1350,16 @@
             }
         });
 
-        // Fetch & Manage Users (Block / Unblock)
+        // Fetch & Manage Users (Full Interactive Management)
+        let allUsersList = [];
+
         async function fetchUsers() {
             try {
                 const res = await fetch(`${API}/users`);
                 const data = await res.json();
-                const tbody = document.getElementById('admin-users-table-body');
                 if (data.success && data.users) {
+                    allUsersList = data.users;
+
                     const userSelect = document.getElementById('v-user-select');
                     if (userSelect) {
                         userSelect.innerHTML = `<option value="">-- All Customers (Public Voucher) --</option>` +
@@ -1247,55 +1370,244 @@
                         };
                     }
 
-                    if (data.users.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-500">No registered users found.</td></tr>`;
-                        return;
-                    }
-
-                    tbody.innerHTML = data.users.map(u => `
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 font-bold text-slate-700">${u.id}</td>
-                            <td class="p-3 font-bold text-slate-900">${u.name}</td>
-                            <td class="p-3 font-medium">+91 ${u.mobile}</td>
-                            <td class="p-3 text-slate-600">${u.email || 'N/A'}</td>
-                            <td class="p-3 font-semibold">${u.total_orders || 0} orders</td>
-                            <td class="p-3 font-bold text-brand-800">₹${u.total_spent || 0}</td>
-                            <td class="p-3">
-                                ${u.account_status === 'deleted' 
-                                    ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800"><i class="fa-solid fa-trash-can mr-1"></i>DELETED</span>`
-                                    : `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${u.is_blocked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">${u.is_blocked ? 'BLOCKED' : 'ACTIVE'}</span>`
-                                }
-                            </td>
-                            <td class="p-3">
-                                ${u.account_status === 'deleted' ? `<span class="text-xs text-slate-400 italic">No actions available</span>` : 
-                                    `<button class="px-3 py-1 text-[11px] font-bold rounded-lg transition toggle-block-btn ${u.is_blocked ? 'bg-emerald-700 hover:bg-emerald-800 text-white' : 'bg-red-700 hover:bg-red-800 text-white'
-                                    }" data-id="${u.id}" data-blocked="${u.is_blocked}">${u.is_blocked ? 'Unblock Account' : 'Block Account'}</button>`
-                                }
-                            </td>
-                        </tr>
-                    `).join('');
-                    document.querySelectorAll('.toggle-block-btn').forEach(btn => {
-                        btn.addEventListener('click', async () => {
-                            const userId = btn.getAttribute('data-id');
-                            const currentlyBlocked = btn.getAttribute('data-blocked') === '1';
-                            const isBlocked = !currentlyBlocked;
-
-                            try {
-                                const res = await fetch(`${API}/users/${userId}/block`, {
-                                    method: 'PUT',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ isBlocked })
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                    fetchUsers();
-                                }
-                            } catch (e) { }
-                        });
-                    });
+                    renderUsersTable();
                 }
             } catch (e) { }
         }
+
+        function renderUsersTable() {
+            const tbody = document.getElementById('admin-users-table-body');
+            const searchVal = (document.getElementById('user-search-input')?.value || '').toLowerCase().trim();
+            const statusFilter = document.getElementById('user-status-filter')?.value || 'ALL';
+            const sortVal = document.getElementById('user-sort-select')?.value || 'NEWEST';
+
+            // Stats
+            const totalCount = allUsersList.length;
+            const activeCount = allUsersList.filter(u => u.account_status !== 'deleted' && !u.is_blocked).length;
+            const blockedCount = allUsersList.filter(u => u.is_blocked === 1).length;
+            const totalRevenue = allUsersList.reduce((acc, u) => acc + (u.total_spent || 0), 0);
+
+            if (document.getElementById('user-stat-total')) document.getElementById('user-stat-total').textContent = totalCount;
+            if (document.getElementById('stat-users')) document.getElementById('stat-users').textContent = totalCount;
+            if (document.getElementById('user-stat-active')) document.getElementById('user-stat-active').textContent = activeCount;
+            if (document.getElementById('user-stat-blocked')) document.getElementById('user-stat-blocked').textContent = blockedCount;
+            if (document.getElementById('user-stat-revenue')) document.getElementById('user-stat-revenue').textContent = `₹${totalRevenue.toLocaleString()}`;
+
+            let filtered = allUsersList.filter(u => {
+                const matchesSearch = !searchVal || 
+                    (u.name && u.name.toLowerCase().includes(searchVal)) ||
+                    (u.mobile && u.mobile.includes(searchVal)) ||
+                    (u.email && u.email.toLowerCase().includes(searchVal)) ||
+                    (u.id && u.id.toLowerCase().includes(searchVal)) ||
+                    (u.city && u.city.toLowerCase().includes(searchVal));
+
+                const matchesStatus = statusFilter === 'ALL' ||
+                    (statusFilter === 'ACTIVE' && u.account_status !== 'deleted' && !u.is_blocked) ||
+                    (statusFilter === 'BLOCKED' && u.is_blocked === 1) ||
+                    (statusFilter === 'DELETED' && u.account_status === 'deleted');
+
+                return matchesSearch && matchesStatus;
+            });
+
+            // Sorting
+            if (sortVal === 'NEWEST') {
+                filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            } else if (sortVal === 'MOST_ORDERS') {
+                filtered.sort((a, b) => (b.total_orders || 0) - (a.total_orders || 0));
+            } else if (sortVal === 'HIGHEST_SPENT') {
+                filtered.sort((a, b) => (b.total_spent || 0) - (a.total_spent || 0));
+            } else if (sortVal === 'NAME_ASC') {
+                filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            }
+
+            if (!tbody) return;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-slate-500 font-semibold">No customers match your search filters.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(u => {
+                const isDeleted = u.account_status === 'deleted';
+                const isBlocked = u.is_blocked === 1;
+
+                return `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3">
+                        <p class="font-bold text-slate-800 text-[11px]">${u.id}</p>
+                        <p class="text-[10px] text-slate-400">${u.created_at ? u.created_at.slice(0, 10) : 'Recent'}</p>
+                    </td>
+                    <td class="p-3">
+                        <p class="font-bold text-slate-900">${u.name}</p>
+                        ${u.city ? `<p class="text-[10px] text-slate-500"><i class="fa-solid fa-location-dot mr-1 text-slate-400"></i>${u.city}</p>` : ''}
+                    </td>
+                    <td class="p-3 font-medium text-slate-700">+91 ${u.mobile}</td>
+                    <td class="p-3 text-slate-600">${u.email || 'N/A'}</td>
+                    <td class="p-3 font-semibold text-slate-800">${u.total_orders || 0} orders</td>
+                    <td class="p-3 font-bold text-brand-800">₹${u.total_spent || 0}</td>
+                    <td class="p-3">
+                        ${isDeleted 
+                            ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800"><i class="fa-solid fa-trash-can mr-1"></i>DELETED</span>`
+                            : `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${isBlocked ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800'}">${isBlocked ? 'BLOCKED' : 'ACTIVE'}</span>`
+                        }
+                    </td>
+                    <td class="p-3">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="openUserDetailsModal('${u.id}')" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-lg transition" title="View Full Details & Order History">
+                                <i class="fa-solid fa-eye"></i> Details
+                            </button>
+                            ${isDeleted ? `<span class="text-[10px] text-slate-400 italic">No actions</span>` : `
+                                <button onclick="toggleUserBlock('${u.id}', ${!isBlocked})" class="px-2 py-1 ${isBlocked ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800' : 'bg-amber-100 hover:bg-amber-200 text-amber-800'} text-[11px] font-bold rounded-lg transition">
+                                    ${isBlocked ? 'Unblock' : 'Block'}
+                                </button>
+                                <button onclick="deleteUserAccount('${u.id}')" class="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-[11px] font-bold rounded-lg transition" title="Delete User">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+        }
+
+        // Attach input listeners for search & filters
+        document.getElementById('user-search-input')?.addEventListener('input', renderUsersTable);
+        document.getElementById('user-status-filter')?.addEventListener('change', renderUsersTable);
+        document.getElementById('user-sort-select')?.addEventListener('change', renderUsersTable);
+
+        window.openUserDetailsModal = async function(userId) {
+            const modal = document.getElementById('user-details-modal');
+            const content = document.getElementById('user-details-modal-content');
+            modal.classList.remove('hidden');
+            content.innerHTML = `<div class="p-8 text-center"><i class="fa-solid fa-spinner fa-spin text-2xl text-brand-800"></i><p class="mt-2 text-xs font-semibold text-slate-500">Loading user profile & order history...</p></div>`;
+
+            try {
+                const res = await fetch(`${API}/users/${userId}`);
+                const data = await res.json();
+                if (data.success && data.user) {
+                    const u = data.user;
+                    const orders = data.orders || [];
+
+                    content.innerHTML = `
+                        <div class="space-y-6">
+                            <!-- Header Profile Card -->
+                            <div class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-brand-50 border border-brand-100">
+                                <div class="flex items-center gap-3">
+                                    <div class="h-12 w-12 rounded-full bg-brand-800 text-white flex items-center justify-center font-bold text-lg shadow">
+                                        ${u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-900 text-base">${u.name}</h4>
+                                        <p class="text-xs text-slate-500 font-medium">User ID: <span class="font-mono text-brand-800 font-bold">${u.id}</span></p>
+                                    </div>
+                                </div>
+                                <span class="px-3 py-1 rounded-full text-xs font-bold ${u.account_status === 'deleted' ? 'bg-red-100 text-red-800' : (u.is_blocked ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')}">
+                                    ${u.account_status === 'deleted' ? 'DELETED' : (u.is_blocked ? 'BLOCKED' : 'ACTIVE')}
+                                </span>
+                            </div>
+
+                            <!-- Customer Info Grid -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Contact Information</p>
+                                    <p class="text-slate-800 font-bold"><i class="fa-solid fa-phone text-brand-700 mr-1.5"></i> +91 ${u.mobile || 'N/A'}</p>
+                                    <p class="text-slate-700"><i class="fa-solid fa-envelope text-brand-700 mr-1.5"></i> ${u.email || 'N/A'}</p>
+                                    <p class="text-slate-500 text-[11px]"><i class="fa-solid fa-calendar text-brand-700 mr-1.5"></i> Registered: ${u.created_at ? new Date(u.created_at).toLocaleString() : 'N/A'}</p>
+                                </div>
+                                <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Delivery Address</p>
+                                    <p class="text-slate-800 font-semibold">${u.address || 'No address saved'}</p>
+                                    <p class="text-slate-600">${u.city ? u.city + ' - ' : ''}${u.pincode || ''}</p>
+                                </div>
+                            </div>
+
+                            <!-- Customer Order History -->
+                            <div>
+                                <h5 class="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+                                    <span><i class="fa-solid fa-box text-brand-800 mr-1.5"></i> Customer Order History (${orders.length})</span>
+                                    <span class="font-bold text-brand-800">Total Spent: ₹${orders.filter(o => !['CANCELLED', 'PENDING'].includes(o.status)).reduce((acc, o) => acc + (o.total_amount || 0), 0)}</span>
+                                </h5>
+                                ${orders.length === 0 ? `
+                                    <p class="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">No orders placed by this customer yet.</p>
+                                ` : `
+                                    <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                                        <table class="w-full text-left text-xs">
+                                            <thead class="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                                                <tr>
+                                                    <th class="p-2.5">Order ID</th>
+                                                    <th class="p-2.5">Date</th>
+                                                    <th class="p-2.5">Amount</th>
+                                                    <th class="p-2.5">Method</th>
+                                                    <th class="p-2.5">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100">
+                                                ${orders.map(o => `
+                                                    <tr class="hover:bg-slate-50">
+                                                        <td class="p-2.5 font-bold text-brand-800">#${o.id}</td>
+                                                        <td class="p-2.5 text-slate-500">${o.created_at ? o.created_at.slice(0, 10) : 'Recent'}</td>
+                                                        <td class="p-2.5 font-bold text-slate-900">₹${o.total_amount || o.total}</td>
+                                                        <td class="p-2.5 text-slate-600">${o.payment_method || 'Razorpay'}</td>
+                                                        <td class="p-2.5">
+                                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800' :
+                                                                o.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800' :
+                                                                o.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                                                'bg-amber-100 text-amber-800'
+                                                            }">${o.status}</span>
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `<div class="p-6 text-center text-red-600 text-xs font-bold">Failed to load user profile.</div>`;
+                }
+            } catch (e) {
+                content.innerHTML = `<div class="p-6 text-center text-red-600 text-xs font-bold">Error connecting to server.</div>`;
+            }
+        };
+
+        window.toggleUserBlock = async function(userId, newIsBlocked) {
+            try {
+                const res = await fetch(`${API}/users/${userId}/block`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isBlocked: newIsBlocked })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fetchUsers();
+                } else {
+                    alert(data.error || 'Failed to update user block status.');
+                }
+            } catch (e) {
+                alert('Server error while toggling block status.');
+            }
+        };
+
+        window.deleteUserAccount = async function(userId) {
+            if (!confirm('Are you sure you want to delete this user account from database?')) return;
+            try {
+                const res = await fetch(`${API}/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fetchUsers();
+                } else {
+                    alert(data.error || 'Failed to delete user.');
+                }
+            } catch (e) {
+                alert('Server error while deleting user.');
+            }
+        };
 
         document.getElementById('refresh-users-btn').addEventListener('click', fetchUsers);
         
@@ -1393,25 +1705,79 @@
             });
         }
 
-        // Vouchers Table & Create
+        // Vouchers Table & Actions
         async function fetchVouchers() {
             try {
                 const res = await fetch(`${API}/vouchers`);
                 const data = await res.json();
                 const tbody = document.getElementById('vouchers-table-body');
                 if (data.success && data.vouchers) {
-                    tbody.innerHTML = data.vouchers.map(v => `
+                    if (data.vouchers.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-500 font-semibold">No vouchers available in database.</td></tr>`;
+                        return;
+                    }
+                    tbody.innerHTML = data.vouchers.map(v => {
+                        const isActive = v.is_active === 1 || v.is_active === true;
+                        return `
                         <tr>
                             <td class="p-3 font-bold text-brand-800">${v.code}</td>
                             <td class="p-3 font-semibold">${v.discount_type === 'FLAT' ? '₹' + v.discount_value + ' Flat' : v.discount_value + '% Off'}</td>
                             <td class="p-3">₹${v.min_order_amount}</td>
                             <td class="p-3">${v.assigned_mobile ? '+91 ' + v.assigned_mobile : '<span class="text-slate-400">All Customers</span>'}</td>
-                            <td class="p-3"><span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold rounded-full text-[10px]">Active</span></td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} font-bold rounded-full text-[10px]">
+                                    ${isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </td>
+                            <td class="p-3 flex items-center gap-2">
+                                <button onclick="toggleVoucherActive('${v.id}', ${!isActive})" class="px-2.5 py-1 ${isActive ? 'bg-amber-100 hover:bg-amber-200 text-amber-800' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-800'} text-[11px] font-bold rounded-lg transition">
+                                    ${isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button onclick="deleteVoucher('${v.id}')" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-[11px] font-bold rounded-lg transition flex items-center gap-1">
+                                    <i class="fa-solid fa-trash"></i> Delete
+                                </button>
+                            </td>
                         </tr>
-                    `).join('');
+                    `;
+                    }).join('');
                 }
             } catch (e) { }
         }
+
+        window.toggleVoucherActive = async function(id, newStatus) {
+            try {
+                const res = await fetch(`${API}/vouchers/${id}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isActive: newStatus })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fetchVouchers();
+                } else {
+                    alert(data.error || 'Failed to update voucher status.');
+                }
+            } catch (e) {
+                alert('Server error while updating voucher status.');
+            }
+        };
+
+        window.deleteVoucher = async function(id) {
+            if (!confirm('Are you sure you want to permanently delete this voucher?')) return;
+            try {
+                const res = await fetch(`${API}/vouchers/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    fetchVouchers();
+                } else {
+                    alert(data.error || 'Failed to delete voucher.');
+                }
+            } catch (e) {
+                alert('Server error while deleting voucher.');
+            }
+        };
 
         document.getElementById('create-voucher-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1447,6 +1813,14 @@
             } catch (err) {
                 msg.textContent = err.message;
                 msg.className = 'text-xs text-center font-semibold text-red-600';
+            }
+        });
+
+        // Disable right click & developer tool shortcuts
+        document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+            if (e.keyCode === 123 || (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || (e.ctrlKey && e.keyCode === 85)) {
+                e.preventDefault();
             }
         });
     </script>
