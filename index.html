@@ -1095,7 +1095,8 @@
                 if (auth && loginLink) {
                     const token = localStorage.getItem('bookAuthToken');
                     if (token) {
-                        fetch('https://jagirdar.vercel.app/api/vouchers/my-vouchers', {
+                        const API_BASE_V = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? (window.location.port === '5000' ? '' : 'http://localhost:5000') : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
+                        fetch(`${API_BASE_V}/api/vouchers/my-vouchers`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         }).then(res => res.json()).then(data => {
                             if (data.success && data.vouchers && data.vouchers.length > 0) {
@@ -1428,8 +1429,19 @@
             const waForm = document.getElementById('wa-order-form');
             const waQtyInput = document.getElementById('wa-qty');
             const waTotalAmount = document.getElementById('wa-total-amount');
-            let BOOK_PRICE = 399;
+            const cachedPrice = parseInt(localStorage.getItem('cachedBookPrice') || '399', 10);
+            let BOOK_PRICE = !isNaN(cachedPrice) && cachedPrice > 0 ? cachedPrice : 399;
             const WA_NUMBER = "919904499394";
+
+            // Update DOM price elements synchronously (0ms delay on refresh)
+            const heroPriceInit = document.getElementById('hero-book-price');
+            const footerPriceInit = document.getElementById('footer-book-price');
+            if (heroPriceInit) heroPriceInit.textContent = `₹${BOOK_PRICE}`;
+            if (footerPriceInit) footerPriceInit.textContent = `₹${BOOK_PRICE}`;
+            if (waTotalAmount) {
+                const qty = parseInt(waQtyInput?.value || 1, 10);
+                waTotalAmount.textContent = `₹${qty * BOOK_PRICE}`;
+            }
 
             if (openWaModalBtn) {
                 openWaModalBtn.addEventListener('click', (e) => {
@@ -1496,7 +1508,9 @@
             // 9. Fetch Settings for Order Now button and dynamic book price
             async function fetchFrontendSettings() {
                 try {
-                    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                        ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
+                        : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
                     const res = await fetch(`${API_BASE}/api/settings/frontend`);
                     const data = await res.json();
 
@@ -1511,6 +1525,7 @@
                         }
                         if (data.settings.bookPrice !== undefined) {
                             BOOK_PRICE = parseInt(data.settings.bookPrice, 10) || 399;
+                            localStorage.setItem('cachedBookPrice', BOOK_PRICE.toString());
                             const heroPrice = document.getElementById('hero-book-price');
                             const footerPrice = document.getElementById('footer-book-price');
                             if (heroPrice) heroPrice.textContent = `₹${BOOK_PRICE}`;

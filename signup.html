@@ -64,36 +64,36 @@
                     <input id="password" name="password" type="password" placeholder="Create a strong password (min 6 chars)" class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-200" required minlength="6">
                 </div>
 
-                <!-- Step 1: Mobile Verification Section -->
+                <!-- Step 1: WhatsApp Verification Section -->
                 <div class="rounded-2xl border border-brand-100 p-3.5 bg-brand-50/40 space-y-2.5">
                     <div class="flex items-center justify-between">
-                        <label for="mobile" class="text-xs font-bold text-brand-900">1. Mobile Number <span class="text-red-500">*</span></label>
-                        <span id="mobile-badge" class="hidden text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">✓ Verified</span>
+                        <label for="mobile" class="text-xs font-bold text-brand-900">1. Mobile Number (WhatsApp) <span class="text-red-500">*</span></label>
+                        <span id="mobile-badge" class="hidden text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">✓ WhatsApp Verified</span>
                     </div>
                     
                     <div class="flex gap-2">
                         <div class="relative flex-1">
                             <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-semibold text-gray-500">+91</span>
-                            <input id="mobile" name="mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile" class="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-2 text-xs tracking-wider outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200" required>
+                            <input id="mobile" name="mobile" type="tel" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" class="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-3 py-2 text-xs tracking-wider outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-200" required>
                         </div>
                         <button id="send-mobile-otp-btn" type="button" class="rounded-xl bg-brand-800 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-brand-900 shrink-0">
-                            Send OTP
+                            Send WhatsApp OTP
                         </button>
                     </div>
 
-                    <!-- Mobile OTP Box -->
+                    <!-- Mobile WhatsApp OTP Box -->
                     <div id="mobile-otp-box" class="hidden pt-2 space-y-2 border-t border-brand-100">
-                        <label class="block text-[11px] font-semibold text-brand-800">Enter 6-Digit Mobile OTP</label>
+                        <label class="block text-[11px] font-semibold text-brand-800">Enter 6-Digit WhatsApp OTP</label>
                         <div class="flex gap-2">
                             <input id="mobile-otp" type="text" inputmode="numeric" maxlength="6" placeholder="------" class="w-full rounded-xl border border-brand-300 bg-white px-3 py-1.5 text-center text-sm font-bold tracking-[0.2em] outline-none focus:border-brand-500">
                             <button id="verify-mobile-otp-btn" type="button" class="rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 shrink-0">
-                                Verify Mobile OTP
+                                Verify WhatsApp OTP
                             </button>
                         </div>
                         <div class="flex justify-between items-center text-[11px]">
                             <span id="mobile-timer-text" class="text-gray-500">Resend in <b id="mobile-timer-cnt">60</b>s</span>
                             <button id="resend-mobile-otp-btn" type="button" class="font-bold text-brand-700 hover:underline disabled:opacity-40 disabled:no-underline" disabled>
-                                Resend Mobile OTP
+                                Resend WhatsApp OTP
                             </button>
                         </div>
                     </div>
@@ -233,7 +233,10 @@
         const googleSignupBtn = document.getElementById('google-signup-btn');
         const statusMessage = document.getElementById('status-message');
 
-        const API_BASE = 'https://jagirdar.vercel.app/api/auth';
+        const API_HOST = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? '' 
+            : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
+        const API_BASE = `${API_HOST}/api/auth`;
         
         let isMobileVerified = false;
         let isEmailVerified = false;
@@ -314,7 +317,7 @@
                 sendBtn.textContent = 'Sent';
                 sendBtn.classList.replace('bg-brand-800', 'bg-gray-400');
                 startMobileTimer(60);
-                showStatus('📲 Mobile OTP sent successfully.', 'success');
+                showStatus('📲 WhatsApp OTP sent successfully.', 'success');
             } catch (err) {
                 sendBtn.disabled = false;
                 sendBtn.textContent = 'Send OTP';
@@ -612,7 +615,7 @@
                     btn.innerHTML = 'Verify & Complete';
                     btn.disabled = false;
                     msgEl.className = 'text-xs text-center font-semibold mt-1 text-emerald-600';
-                    msgEl.textContent = 'OTP sent to mobile!';
+                    msgEl.textContent = 'OTP sent to your WhatsApp number!';
                 } catch (err) {
                     console.error(err);
                     msgEl.className = 'text-xs text-center font-semibold mt-1 text-red-600';

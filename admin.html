@@ -686,7 +686,10 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        const API = 'https://jagirdar.vercel.app/api/admin';
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
+            : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
+        const API = `${API_BASE}/api/admin`;
         let adminToken = sessionStorage.getItem('adminToken') || '';
         let currentSelectedOrderId = null;
 
@@ -911,9 +914,16 @@
         const bookPriceInput = document.getElementById('book-price-input');
         const savePriceBtn = document.getElementById('save-price-btn');
 
+        // Pre-fill from localStorage synchronously (0ms delay)
+        if (bookPriceInput) {
+            const cachedPrice = localStorage.getItem('cachedBookPrice');
+            if (cachedPrice) {
+                bookPriceInput.value = cachedPrice;
+            }
+        }
+
         async function fetchOnlineOrdersSettings() {
             try {
-                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
                 const res = await fetch(`${API_BASE}/api/settings/frontend`);
                 const data = await res.json();
                 if (data.success && data.settings) {
@@ -923,6 +933,7 @@
                     orderStatusText.className = isEnabled ? 'text-xs font-bold text-emerald-600 uppercase tracking-wider' : 'text-xs font-bold text-red-600 uppercase tracking-wider';
                     if (data.settings.bookPrice !== undefined && bookPriceInput) {
                         bookPriceInput.value = data.settings.bookPrice;
+                        localStorage.setItem('cachedBookPrice', data.settings.bookPrice.toString());
                     }
                 }
             } catch (err) {
@@ -937,7 +948,6 @@
             orderStatusText.className = 'text-xs font-bold text-slate-500 uppercase tracking-wider animate-pulse';
 
             try {
-                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
                 const res = await fetch(`${API_BASE}/api/settings/frontend`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -969,11 +979,13 @@
                     return;
                 }
 
+                // 1. Instantly cache in localStorage so other pages get updated price immediately
+                localStorage.setItem('cachedBookPrice', newPrice.toString());
+
                 savePriceBtn.disabled = true;
                 savePriceBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
                 try {
-                    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
                     const res = await fetch(`${API_BASE}/api/settings/frontend`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },

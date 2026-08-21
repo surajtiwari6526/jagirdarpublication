@@ -167,7 +167,10 @@
         const googleLoginBtn = document.getElementById('google-login-btn');
         const statusMessage = document.getElementById('status-message');
 
-        const API_BASE = 'https://jagirdar.vercel.app/api/auth';
+        const API_HOST = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? '' 
+            : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
+        const API_BASE = `${API_HOST}/api/auth`;
 
         const showStatus = (message, type = 'info') => {
             statusMessage.textContent = message;

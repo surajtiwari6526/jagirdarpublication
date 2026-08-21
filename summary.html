@@ -86,10 +86,13 @@
     </div>
 
     <script>
-        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+        const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
+            : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
         const addressData = JSON.parse(sessionStorage.getItem('bookAddress') || '{}');
         const quantity = parseInt(sessionStorage.getItem('bookQuantity') || '1', 10);
-        let pricePerBook = 399;
+        const cachedPrice = parseInt(localStorage.getItem('cachedBookPrice') || '399', 10);
+        let pricePerBook = !isNaN(cachedPrice) && cachedPrice > 0 ? cachedPrice : 399;
         let subtotal = pricePerBook * quantity;
 
         const summaryAddress = document.getElementById('summary-address');
@@ -123,6 +126,7 @@
                 const data = await res.json();
                 if (data.success && data.settings && data.settings.bookPrice !== undefined) {
                     pricePerBook = parseInt(data.settings.bookPrice, 10) || 399;
+                    localStorage.setItem('cachedBookPrice', pricePerBook.toString());
                     subtotal = pricePerBook * quantity;
                     updatePricing();
                 }
@@ -268,7 +272,9 @@
                     return;
                 }
 
-                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
+                    : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
 
                 payNowBtn.disabled = true;
                 payNowBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';

@@ -109,23 +109,38 @@
             window.location.href = 'address.html';
         });
 
+        // Pre-fill price synchronously from localStorage (0ms delay)
+        const cachedBookPrice = localStorage.getItem('cachedBookPrice');
+        if (cachedBookPrice) {
+            const priceDisplay = document.getElementById('book-price-display');
+            if (priceDisplay) priceDisplay.textContent = `₹${cachedBookPrice}`;
+        }
+
         // Redirect if order online is disabled & fetch store settings
         async function checkSettings() {
             try {
-                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://jagirdar.vercel.app';
+                const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+                    ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
+                    : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
                 const res = await fetch(`${API_BASE}/api/settings/frontend`);
                 const data = await res.json();
                 if (!data.success || !data.settings || data.settings.isOrderNowEnabled !== true) {
                     window.location.href = 'index.html';
                 } else {
                     if (data.settings.bookPrice !== undefined) {
+                        localStorage.setItem('cachedBookPrice', data.settings.bookPrice.toString());
                         const priceDisplay = document.getElementById('book-price-display');
                         if (priceDisplay) priceDisplay.textContent = `₹${data.settings.bookPrice}`;
                     }
                     document.getElementById('main-body').style.display = 'block';
                 }
             } catch (err) {
-                window.location.href = 'index.html';
+                // If offline or network error but cached price exists, keep showing
+                if (cachedBookPrice) {
+                    document.getElementById('main-body').style.display = 'block';
+                } else {
+                    window.location.href = 'index.html';
+                }
             }
         }
         checkSettings();

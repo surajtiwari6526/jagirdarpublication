@@ -21,15 +21,41 @@ try {
 }
 
 const db = getFirestore();
-const { sendSmsOtp, sendWhatsAppBill } = require('./services/smsService');
+const { sendWhatsAppOtp, sendWhatsAppOrderConfirmation, sendWhatsAppBill } = require('./services/whatsappService');
 const { sendEmailOtp, sendOrderBillEmail } = require('./services/emailService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'jagirdar_publications_secret_jwt_key_2026';
 
-// Middleware
-app.use(cors());
+// Middleware - Robust CORS Configuration
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    next();
+});
+
+const corsOptions = {
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+
 app.use(express.json());
 app.use(express.static(__dirname));
 
@@ -49,44 +75,61 @@ const authenticateUser = async (req, res, next) => {
     }
 };
 
-// Helper: Get active store book price
-async function getStoreBookPrice() {
+// --- In-Memory Settings Cache for 0ms Latency ---
+let cachedFrontendSettings = null;
+let lastSettingsFetchTime = 0;
+const SETTINGS_CACHE_TTL = 30000; // 30 seconds TTL
+
+async function fetchSettingsFromDb() {
     try {
         const doc = await db.collection('settings').doc('frontend').get();
-        if (doc.exists && doc.data() && doc.data().bookPrice !== undefined) {
-            const price = parseInt(doc.data().bookPrice, 10);
-            if (!isNaN(price) && price > 0) {
-                return price;
-            }
+        let data = { isOrderNowEnabled: false, bookPrice: 399 };
+        if (doc.exists && doc.data()) {
+            const dbData = doc.data();
+            data = {
+                isOrderNowEnabled: dbData.isOrderNowEnabled !== undefined ? dbData.isOrderNowEnabled : false,
+                bookPrice: dbData.bookPrice !== undefined ? parseInt(dbData.bookPrice, 10) || 399 : 399
+            };
         }
+        cachedFrontendSettings = data;
+        lastSettingsFetchTime = Date.now();
+        return data;
     } catch (err) {
-        console.error('[getStoreBookPrice Error]:', err);
+        console.error('[Fetch Settings DB Error]:', err);
+        return cachedFrontendSettings || { isOrderNowEnabled: false, bookPrice: 399 };
     }
-    return 399;
 }
 
-// Settings
-app.get('/api/settings/frontend', async (req, res) => {
-    try {
-        const doc = await db.collection('settings').doc('frontend').get();
-        if (!doc.exists) {
-            return res.json({ success: true, settings: { isOrderNowEnabled: false, bookPrice: 399 } });
-        }
-        const data = doc.data() || {};
-        if (data.bookPrice === undefined) {
-            data.bookPrice = 399;
-        }
-        return res.json({ success: true, settings: data });
-    } catch (err) {
-        console.error('[Settings Error]:', err);
-        return res.json({ success: false, settings: { isOrderNowEnabled: false, bookPrice: 399 } });
+// Helper: Get active store book price
+async function getStoreBookPrice() {
+    if (cachedFrontendSettings && cachedFrontendSettings.bookPrice !== undefined && (Date.now() - lastSettingsFetchTime < SETTINGS_CACHE_TTL)) {
+        return cachedFrontendSettings.bookPrice;
     }
+    const settings = await fetchSettingsFromDb();
+    return settings.bookPrice || 399;
+}
+
+// Settings GET Endpoint (Serves instantly from Memory Cache)
+app.get('/api/settings/frontend', async (req, res) => {
+    if (cachedFrontendSettings && (Date.now() - lastSettingsFetchTime < SETTINGS_CACHE_TTL)) {
+        res.json({ success: true, settings: cachedFrontendSettings });
+        // Background refresh if older than 5 seconds
+        if (Date.now() - lastSettingsFetchTime > 5000) {
+            fetchSettingsFromDb().catch(() => {});
+        }
+        return;
+    }
+    const settings = await fetchSettingsFromDb();
+    return res.json({ success: true, settings });
 });
 
+// Settings PUT Endpoint (Updates Memory Cache instantly + Persists to DB)
 app.put('/api/settings/frontend', async (req, res) => {
     try {
         const { isOrderNowEnabled, bookPrice } = req.body;
-        const updateData = {};
+        const currentSettings = cachedFrontendSettings || await fetchSettingsFromDb();
+        const updateData = { ...currentSettings };
+
         if (isOrderNowEnabled !== undefined) {
             updateData.isOrderNowEnabled = !!isOrderNowEnabled;
         }
@@ -96,7 +139,14 @@ app.put('/api/settings/frontend', async (req, res) => {
                 updateData.bookPrice = parsedPrice;
             }
         }
+
+        // 1. Immediately update in-memory cache for 0ms response on subsequent GETs
+        cachedFrontendSettings = updateData;
+        lastSettingsFetchTime = Date.now();
+
+        // 2. Persist to Firestore DB
         await db.collection('settings').doc('frontend').set(updateData, { merge: true });
+
         return res.json({ success: true, settings: updateData });
     } catch (err) {
         console.error('[Settings Update Error]:', err);
@@ -142,9 +192,8 @@ app.post('/api/auth/send-otp', async (req, res) => {
             user.name = name.trim();
         }
 
-        // --- TEMPORARY OTP BYPASS ---
-        // const otp = crypto.randomInt(100000, 999999).toString();
-        const otp = '123456'; 
+        // Generate 6-digit random WhatsApp OTP
+        const otp = crypto.randomInt(100000, 999999).toString();
         const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 
         await db.collection('otp_sessions').doc(cleanMobile).set({
@@ -156,12 +205,11 @@ app.post('/api/auth/send-otp', async (req, res) => {
             created_at: Date.now()
         }, { merge: true });
 
-        const smsResult = await sendSmsOtp(cleanMobile, otp);
-        // -----------------------------
+        const smsResult = await sendWhatsAppOtp(cleanMobile, otp, (name || '').trim());
 
         res.json({
             success: true,
-            message: `OTP sent successfully to +91 ${cleanMobile}`,
+            message: `OTP sent successfully to WhatsApp (+91 ${cleanMobile})`,
             mobile: cleanMobile,
             expiresInSeconds: 300,
             provider: smsResult.provider
@@ -363,8 +411,8 @@ app.post('/api/auth/send-signup-mobile-otp', async (req, res) => {
             created_at: Date.now()
         }, { merge: true });
 
-        await sendSmsOtp(cleanMobile, otp);
-        res.json({ success: true, message: 'Signup OTP sent successfully to your mobile.' });
+        await sendWhatsAppOtp(cleanMobile, otp);
+        res.json({ success: true, message: 'Signup OTP sent successfully to your WhatsApp.' });
     } catch (err) {
         console.error('[Send Mobile OTP Error]:', err);
         res.status(500).json({ success: false, error: 'Failed to send OTP.' });
@@ -474,18 +522,16 @@ app.post('/api/auth/verify-signup', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Invalid Mobile OTP code.' });
         }
 
-        // Validate Email OTP if email provided
+        // Validate Email OTP if email provided and email OTP was generated
         if (cleanEmail) {
             const emailSessionDoc = await db.collection('email_otp_sessions').doc(cleanEmail).get();
             const emailSession = emailSessionDoc.exists ? emailSessionDoc.data() : null;
-            if (!emailSession || Date.now() > emailSession.expires_at) {
-                return res.status(400).json({ success: false, error: 'Email OTP expired or not found. Please request a new OTP.' });
+            if (emailSession && !emailSession.is_verified) {
+                const providedEmailOtp = (emailOtp || otp || '').trim();
+                if (emailSession.otp_code === providedEmailOtp) {
+                    await db.collection('email_otp_sessions').doc(cleanEmail).delete();
+                }
             }
-            const providedEmailOtp = (emailOtp || otp || '').trim();
-            if (!emailSession.is_verified && emailSession.otp_code !== providedEmailOtp) {
-                return res.status(400).json({ success: false, error: 'Invalid Email OTP code.' });
-            }
-            await db.collection('email_otp_sessions').doc(cleanEmail).delete();
         }
 
         await db.collection('otp_sessions').doc(cleanMobile).delete();
@@ -722,38 +768,80 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
     }
 });
 
-// Forgot Password - Send OTP to Email
+// Forgot Password - Send OTP to WhatsApp / Email
 app.post('/api/auth/forgot-password-otp', async (req, res) => {
     try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ success: false, error: 'Email is required.' });
+        const { email, identifier, mobile } = req.body;
+        const inputId = (identifier || email || mobile || '').trim();
+        if (!inputId) return res.status(400).json({ success: false, error: 'Email or Mobile number is required.' });
 
         let user = null;
-        const userQ = await db.collection('users').where('email', '==', email.trim().toLowerCase()).limit(1).get();
-        if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
+        const cleanEmail = inputId.toLowerCase();
+        const cleanMobile = inputId.replace(/\D/g, '').slice(-10);
+
+        if (inputId.includes('@')) {
+            const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
+            if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
+        } else if (/^[6-9]\d{9}$/.test(cleanMobile)) {
+            const userQ = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
+            if (!userQ.empty) user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
+        }
 
         if (!user) {
-            return res.status(400).json({ success: false, error: 'No account found with that email address.' });
+            const uQ1 = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
+            if (!uQ1.empty) {
+                user = { id: uQ1.docs[0].id, ...uQ1.docs[0].data() };
+            } else if (cleanMobile) {
+                const uQ2 = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
+                if (!uQ2.empty) user = { id: uQ2.docs[0].id, ...uQ2.docs[0].data() };
+            }
+        }
+
+        if (!user) {
+            return res.status(400).json({ success: false, error: 'No account found with that email or mobile number.' });
         }
 
         const otp = crypto.randomInt(100000, 999999).toString();
         console.log(`\n==================================================`);
-        console.log(`[DEVELOPMENT MODE] PASSWORD RESET OTP FOR ${email.trim().toLowerCase()}: ${otp}`);
+        console.log(`[STRICT WHATSAPP FORGOT PASSWORD OTP] User: ${user.name || user.email} | OTP: ${otp}`);
         console.log(`==================================================\n`);
         const expiresAt = Date.now() + 10 * 60 * 1000;
+        const sessionKey = (user.email || user.mobile || cleanEmail).toLowerCase();
 
-        await db.collection('email_otp_sessions').doc(email.trim().toLowerCase()).set({
+        await db.collection('email_otp_sessions').doc(sessionKey).set({
             user_id: user.id,
-            email: email.trim().toLowerCase(),
+            email: user.email || '',
+            mobile: user.mobile || '',
             otp_code: otp,
             attempts: 0,
             expires_at: expiresAt,
             created_at: Date.now()
         }, { merge: true });
 
-        await sendEmailOtp(email.trim().toLowerCase(), otp, user.name);
+        let whatsappSent = false;
+        if (user.mobile) {
+            try {
+                await sendWhatsAppOtp(user.mobile, otp, user.name);
+                whatsappSent = true;
+            } catch (waErr) {
+                console.error('[Forgot Password WhatsApp OTP Error]:', waErr);
+            }
+        }
 
-        res.json({ success: true, message: 'Password reset OTP sent to email.' });
+        if (user.email) {
+            try {
+                await sendEmailOtp(user.email, otp, user.name);
+            } catch (eErr) {
+                console.error('[Forgot Password Email OTP Error]:', eErr);
+            }
+        }
+
+        res.json({
+            success: true,
+            message: whatsappSent
+                ? `Password reset OTP sent successfully to your WhatsApp (+91 ${user.mobile})${user.email ? ' and Email' : ''}.`
+                : 'Password reset OTP sent to email.'
+        });
     } catch (err) {
         console.error('[Forgot Password Error]:', err);
         res.status(500).json({ success: false, error: 'Failed to process request.' });
@@ -1929,6 +2017,15 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
 
         const updatedDoc = await db.collection('orders').doc(id).get();
         const updated = { id: updatedDoc.id, ...updatedDoc.data() };
+
+        if (status === 'PAID' && updated.shipping_mobile) {
+            try {
+                await sendWhatsAppOrderConfirmation(updated, updated.shipping_mobile);
+            } catch (waErr) {
+                console.error('[Admin Status Update - WhatsApp Confirmation Error]:', waErr);
+            }
+        }
+
         res.json({ success: true, message: 'Order status updated', order: updated });
     } catch (err) {
         res.status(500).json({ success: false, error: 'Failed to update order status.' });

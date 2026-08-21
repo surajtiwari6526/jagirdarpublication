@@ -1,5 +1,4 @@
 {
-  
   "firestore": {
     "database": "(default)",
     "location": "asia-east1",
@@ -8,23 +7,21 @@
   },
   "hosting": {
     "public": ".",
+    "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "server.js",
-      "database.js",
-      "database.db",
+      ".vercel/**",
+      ".firebase/**",
+      "api/**",
       "services/**",
+      "*.db",
+      "*.log",
       "*.json",
-      "test-otp.js",
-      "y/**"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      "package*.json",
+      "vercel.json"
     ]
   }
 }
