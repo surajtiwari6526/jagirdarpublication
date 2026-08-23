@@ -21,7 +21,14 @@ async function sendWhatsAppOtp(mobile, otp, name = 'Customer') {
     const cleanMobile = formatMobileNumber(mobile);
     const recipientPhone = `91${cleanMobile}`;
 
-    const whatsappApiToken = process.env.WHATSAPP_API_TOKEN || process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_API || process.env.whatsapp_api || '';
+    const tokens = [
+        process.env.WHATSAPP_API_TOKEN,
+        process.env.WHATSAPP_TOKEN,
+        process.env.WHATSAPP_API,
+        process.env.whatsapp_api,
+        process.env.whatsapp_key_API
+    ].filter(Boolean);
+    const whatsappApiToken = tokens.find(t => t.startsWith('EAA')) || tokens[0] || '';
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.PHONE_NUMBER_ID || '1305232249329239';
     const otpTemplateName = process.env.WHATSAPP_OTP_TEMPLATE || process.env.WHATSAPP_TEMPLATE_NAME || 'otp';
 
@@ -69,7 +76,13 @@ async function sendWhatsAppOtp(mobile, otp, name = 'Customer') {
         console.log('[Meta WhatsApp OTP Template Sent Successfully]:', response.data);
         return { success: true, provider: 'whatsapp_cloud_api', data: response.data };
     } catch (err) {
-        console.error('[Meta WhatsApp OTP Template Failed]:', err.response ? err.response.data : err.message);
+        const errorData = err.response ? err.response.data : null;
+        if (errorData && errorData.error && errorData.error.code === 190) {
+            console.error('\n⚠️ [WHATSAPP API TOKEN EXPIRED] Meta Graph API returned Error 190 (Session/Token Expired).');
+            console.error('👉 Please generate a fresh Meta Access Token from https://developers.facebook.com and update WHATSAPP_API_TOKEN in .env\n');
+        } else {
+            console.error('[Meta WhatsApp OTP Template Failed]:', errorData || err.message);
+        }
     }
 
     // 2. Try Direct WhatsApp Text Message via Meta Cloud API
@@ -89,7 +102,12 @@ async function sendWhatsAppOtp(mobile, otp, name = 'Customer') {
         console.log('[Meta WhatsApp OTP Text Message Sent]:', textResponse.data);
         return { success: true, provider: 'whatsapp_text_api', data: textResponse.data };
     } catch (textErr) {
-        console.error('[Meta WhatsApp OTP Text Failed]:', textErr.response ? textErr.response.data : textErr.message);
+        const textErrorData = textErr.response ? textErr.response.data : null;
+        if (textErrorData && textErrorData.error && textErrorData.error.code === 190) {
+            console.error('\n⚠️ [WHATSAPP API TOKEN EXPIRED] Meta Graph API returned Error 190 (Session/Token Expired).\n');
+        } else {
+            console.error('[Meta WhatsApp OTP Text Failed]:', textErrorData || textErr.message);
+        }
     }
 
     console.log('[WhatsApp Service Notice]: SMS disabled. OTP logged in console above.');
@@ -110,7 +128,14 @@ async function sendWhatsAppOrderConfirmation(order, mobile) {
     const cleanMobile = formatMobileNumber(mobile);
     const recipientPhone = `91${cleanMobile}`;
 
-    const whatsappApiToken = process.env.WHATSAPP_API_TOKEN || process.env.WHATSAPP_TOKEN || process.env.WHATSAPP_API || process.env.whatsapp_api || '';
+    const tokens = [
+        process.env.WHATSAPP_API_TOKEN,
+        process.env.WHATSAPP_TOKEN,
+        process.env.WHATSAPP_API,
+        process.env.whatsapp_api,
+        process.env.whatsapp_key_API
+    ].filter(Boolean);
+    const whatsappApiToken = tokens.find(t => t.startsWith('EAA')) || tokens[0] || '';
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.PHONE_NUMBER_ID || '1305232249329239';
     const templateName = process.env.WHATSAPP_ORDER_CONFIRMATION_TEMPLATE || process.env.payment_confirmation || process.env.WHATSAPP_TEMPLATE_2 || process.env.WHATSAPP_TEMPLATE_NAME || 'payment_completed';
 

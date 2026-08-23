@@ -57,7 +57,12 @@ app.use(cors(corsOptions));
 
 
 app.use(express.json());
-app.use(express.static(__dirname));
+const rootDir = path.join(__dirname, '..');
+app.use(express.static(rootDir));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(rootDir, 'index.html'));
+});
 
 // JWT Auth Middleware for Users
 const authenticateUser = async (req, res, next) => {
@@ -157,6 +162,34 @@ app.put('/api/settings/frontend', async (req, res) => {
 // Health Check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', service: 'Jagirdar Publications Full Backend', time: new Date().toISOString() });
+});
+
+// Meta WhatsApp Cloud API Webhook Verification & Listener
+app.get('/api/whatsapp/webhook', (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+    const expectedToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'jagirdar_whatsapp_webhook_secret_2026';
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === expectedToken) {
+            console.log('[Meta Webhook Verified Successfully]');
+            return res.status(200).send(challenge);
+        } else {
+            console.warn('[Meta Webhook Verification Failed]: Invalid Token');
+            return res.sendStatus(403);
+        }
+    }
+    return res.sendStatus(400);
+});
+
+app.post('/api/whatsapp/webhook', (req, res) => {
+    const body = req.body;
+    if (body.object) {
+        console.log('[Meta Webhook Incoming Event]:', JSON.stringify(body, null, 2));
+        return res.status(200).send('EVENT_RECEIVED');
+    }
+    return res.sendStatus(404);
 });
 
 // ==========================================
