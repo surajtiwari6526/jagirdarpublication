@@ -1,0 +1,27 @@
+{
+    "version": 2,
+    "headers": [
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                { "key": "Access-Control-Allow-Credentials", "value": "true" },
+                { "key": "Access-Control-Allow-Origin", "value": "*" },
+                { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
+                { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
+            ]
+        }
+    ],
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/api/index.js"
+        }
+    ],
+    "env": {
+        "GMAIL_USER": "jagidar.support@gmail.com",
+        "JWT_SECRET": "jagirdar_publications_secret_jwt_key_2026_secure",
+        "RAZORPAY_KEY_ID": "rzp_live_TOk3EEZaStpxe9",
+        "GMAIL_PASS": "soiv tesx oqig njao",
+        "RAZORPAY_KEY_SECRET": "MVnpUGCcb74FITZs4iXfWlZu"
+    }
+}
