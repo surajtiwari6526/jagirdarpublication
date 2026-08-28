@@ -698,44 +698,52 @@ app.post('/api/auth/google-login', async (req, res) => {
         if (!email) return res.status(400).json({ success: false, error: 'Google email is required.' });
 
         const cleanEmail = email.trim().toLowerCase();
-        let user = null;
         const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
         
         if (!userQ.empty) {
-            user = { id: userQ.docs[0].id, ...userQ.docs[0].data() };
-        } else {
-            // Auto-create user account for Google Signup instantly
-            const userId = 'USR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-            const now = new Date().toISOString();
-            user = {
-                id: userId,
-                name: (name || 'Google User').trim(),
-                email: cleanEmail,
-                mobile: '',
-                password_hash: '',
-                address: '',
-                city: '',
-                pincode: '',
-                is_blocked: 0,
-                account_status: 'active',
-                is_email_verified: 1,
-                is_mobile_verified: 0,
-                auth_provider: 'google',
-                firebase_uid: firebaseUid || '',
-                created_at: now
-            };
-            await db.collection('users').doc(userId).set(user);
+            const userDoc = userQ.docs[0].data();
+            const userId = userQ.docs[0].id;
+
+            if (userDoc.is_blocked === 1) {
+                return res.status(403).json({ success: false, error: 'Your account has been blocked by administrator.' });
+            }
+            if (userDoc.account_status === 'deleted') {
+                return res.status(403).json({ success: false, error: 'Account not found or deleted.' });
+            }
+
+            // IF ACCOUNT ALREADY EXISTS & HAS A VERIFIED MOBILE NUMBER -> LOGIN DIRECTLY!
+            if (userDoc.mobile && (userDoc.is_mobile_verified === 1 || userDoc.is_mobile_verified === true)) {
+                const token = jwt.sign(
+                    { id: userId, mobile: userDoc.mobile, name: userDoc.name, email: userDoc.email },
+                    JWT_SECRET,
+                    { expiresIn: '30d' }
+                );
+                return res.json({
+                    success: true,
+                    isNewUser: false,
+                    message: 'Google login successful!',
+                    token,
+                    user: {
+                        id: userId,
+                        name: userDoc.name,
+                        mobile: userDoc.mobile,
+                        email: userDoc.email,
+                        is_mobile_verified: 1,
+                        is_email_verified: 1,
+                        loggedIn: true
+                    }
+                });
+            }
         }
 
-        if (user.is_blocked === 1) {
-            return res.status(403).json({ success: false, error: 'Account blocked.' });
-        }
-        if (user.account_status === 'deleted') {
-            return res.status(403).json({ success: false, error: 'Account not found or deleted.' });
-        }
-
-        const token = jwt.sign({ id: user.id, mobile: user.mobile || '', name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
-        res.json({ success: true, message: 'Google login successful!', token, user: { id: user.id, name: user.name, mobile: user.mobile || '', email: user.email, is_mobile_verified: user.is_mobile_verified || 0, is_email_verified: user.is_email_verified || 1, loggedIn: true } });
+        // IF ACCOUNT IS NEW OR MOBILE NUMBER IS NOT YET VERIFIED -> ASK FOR PHONE NUMBER VERIFICATION!
+        res.json({
+            success: true,
+            isNewUser: true,
+            email: cleanEmail,
+            name: name || 'Google User',
+            firebaseUid: firebaseUid || ''
+        });
     } catch (err) {
         console.error('[Google Login Error]:', err);
         res.status(500).json({ success: false, error: 'Server error during Google login.' });
@@ -753,7 +761,7 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Email, password, mobile, and OTP are required.' });
         }
 
-        // Verify OTP
+        // Verify OTP from otp_sessions
         const sessionDoc = await db.collection('otp_sessions').doc(cleanMobile).get();
         const session = sessionDoc.exists ? sessionDoc.data() : null;
         if (!session || session.otp_code !== otp || Date.now() > session.expires_at) {
@@ -770,20 +778,23 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
         let userDoc;
 
         if (!userQ.empty) {
-            // Update existing Google user record with mobile & password
+            // Update existing Google user record with verified mobile & password
             userId = userQ.docs[0].id;
+            const existingData = userQ.docs[0].data();
             userDoc = {
-                ...userQ.docs[0].data(),
+                ...existingData,
                 mobile: cleanMobile,
                 password_hash: passwordHash,
                 is_mobile_verified: 1,
-                is_email_verified: 1
+                is_email_verified: 1,
+                auth_provider: 'google'
             };
             await db.collection('users').doc(userId).update({
                 mobile: cleanMobile,
                 password_hash: passwordHash,
                 is_mobile_verified: 1,
-                is_email_verified: 1
+                is_email_verified: 1,
+                auth_provider: 'google'
             });
         } else {
             // Create new user record
@@ -791,7 +802,7 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
             const now = new Date().toISOString();
             userDoc = { 
                 id: userId, 
-                name: (name || 'User').trim(), 
+                name: (name || 'Google User').trim(), 
                 mobile: cleanMobile, 
                 email: cleanEmail, 
                 password_hash: passwordHash,
@@ -807,12 +818,30 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
             };
             await db.collection('users').doc(userId).set(userDoc);
         }
-        
-        const token = jwt.sign({ id: userDoc.id, mobile: userDoc.mobile, name: userDoc.name, email: userDoc.email }, JWT_SECRET, { expiresIn: '30d' });
-        res.json({ success: true, message: 'Account updated successfully!', token, user: { id: userDoc.id, name: userDoc.name, mobile: userDoc.mobile, email: userDoc.email, is_mobile_verified: userDoc.is_mobile_verified || 0, is_email_verified: userDoc.is_email_verified || 0, loggedIn: true } });
+
+        const token = jwt.sign(
+            { id: userId, mobile: cleanMobile, name: userDoc.name, email: cleanEmail },
+            JWT_SECRET,
+            { expiresIn: '30d' }
+        );
+
+        res.json({
+            success: true,
+            message: 'Google profile complete and logged in!',
+            token,
+            user: {
+                id: userId,
+                name: userDoc.name,
+                mobile: cleanMobile,
+                email: cleanEmail,
+                is_mobile_verified: 1,
+                is_email_verified: 1,
+                loggedIn: true
+            }
+        });
     } catch (err) {
         console.error('[Google Signup Complete Error]:', err);
-        res.status(500).json({ success: false, error: 'Server error during signup completion.' });
+        res.status(500).json({ success: false, error: 'Server error completing Google signup.' });
     }
 });
 
