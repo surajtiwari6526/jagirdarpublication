@@ -1179,19 +1179,34 @@
                             <td class="p-3 font-medium text-slate-600">${o.payment_method}</td>
                             <td class="p-3 font-mono text-[10px] text-slate-500">${o.razorpay_payment_id || 'N/A'}</td>
                             <td class="p-3">
-                                ${['PAID', 'PROCESSING'].includes(o.status) ? `
-                                    <button class="px-3 py-1.5 bg-amber-500 text-white text-[10px] font-bold rounded-full hover:bg-amber-600 transition shadow-sm ship-action-btn flex items-center gap-1" data-id="${o.id}">
-                                        <i class="fa-solid fa-truck-fast"></i> Ship Now
-                                    </button>
-                                ` : `
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                                        o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                                        o.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
-                                        o.status === 'PENDING_VERIFICATION' ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' :
-                                        o.status === 'PENDING' ? 'bg-red-50 text-red-700 border border-red-200' :
-                                        'bg-slate-100 text-slate-700'
-                                    }">${o.status === 'IN_TRANSIT' ? 'SHIPPED' : (o.status === 'PENDING_VERIFICATION' ? 'UPI REVIEW PENDING' : (o.status === 'PENDING' ? 'UNPAID' : o.status))}</span>
-                                `}
+                                <div class="flex flex-col gap-1.5 min-w-[120px]">
+                                    ${o.shiprocket_order_id ? `
+                                        <span class="px-2 py-0.5 bg-purple-100 text-purple-900 border border-purple-300 font-bold rounded text-[10px] flex items-center gap-1">
+                                            <i class="fa-solid fa-rocket text-purple-700"></i> SR #${o.shiprocket_order_id}
+                                        </span>
+                                    ` : ''}
+                                    ${['PAID', 'PROCESSING'].includes(o.status) ? `
+                                        <button class="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white text-[10px] font-bold rounded-lg transition shadow-sm shiprocket-sync-btn flex items-center gap-1" data-id="${o.id}">
+                                            <i class="fa-solid fa-rocket"></i> ${o.shiprocket_order_id ? 'Re-sync SR' : 'Shipvia Shiprocket'}
+                                        </button>
+                                        <button class="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition shadow-sm ship-action-btn flex items-center gap-1" data-id="${o.id}">
+                                            <i class="fa-solid fa-truck-fast"></i> Mark Shipped
+                                        </button>
+                                    ` : `
+                                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                                            o.status === 'DELIVERED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                            o.status === 'IN_TRANSIT' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                                            o.status === 'PENDING_VERIFICATION' ? 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse' :
+                                            o.status === 'PENDING' ? 'bg-red-50 text-red-700 border border-red-200' :
+                                            'bg-slate-100 text-slate-700'
+                                        }">${o.status === 'IN_TRANSIT' ? 'SHIPPED' : (o.status === 'PENDING_VERIFICATION' ? 'UPI REVIEW PENDING' : (o.status === 'PENDING' ? 'UNPAID' : o.status))}</span>
+                                    `}
+                                    ${(o.awb_code || o.shiprocket_order_id) ? `
+                                        <button onclick="adminTrackShiprocket('${o.id}')" class="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-bold rounded border border-slate-300 transition flex items-center gap-1 justify-center">
+                                            <i class="fa-solid fa-location-crosshairs text-purple-700"></i> Track Live
+                                        </button>
+                                    ` : ''}
+                                </div>
                             </td>
                             <td class="p-3">
                                 <button class="px-3 py-1 bg-brand-800 text-white text-[11px] font-bold rounded-lg hover:bg-brand-900 update-status-btn"
@@ -1205,6 +1220,36 @@
                         </tr>
                     `;
                     }).join('');
+
+                    // Attach Shiprocket Sync Listeners
+                    document.querySelectorAll('.shiprocket-sync-btn').forEach(btn => {
+                        btn.addEventListener('click', async () => {
+                            btn.disabled = true;
+                            const originalHtml = btn.innerHTML;
+                            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
+                            const orderId = btn.getAttribute('data-id');
+                            try {
+                                const res = await fetch(`${API_BASE}/api/shiprocket/create-order`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ orderId })
+                                });
+                                const resData = await res.json();
+                                if (resData.success) {
+                                    alert(`Order ${orderId} successfully synced to Shiprocket!\nShiprocket ID: ${resData.shiprocket.shiprocket_order_id}`);
+                                    fetchOrders();
+                                } else {
+                                    alert(`Shiprocket Sync Warning: ${resData.error || 'Failed to create order'}`);
+                                    btn.disabled = false;
+                                    btn.innerHTML = originalHtml;
+                                }
+                            } catch (err) {
+                                alert(`Error connecting to Shiprocket service: ${err.message}`);
+                                btn.disabled = false;
+                                btn.innerHTML = originalHtml;
+                            }
+                        });
+                    });
 
                     // Attach Shipped Button Listeners
                     document.querySelectorAll('.ship-action-btn').forEach(btn => {
@@ -1827,6 +1872,29 @@
                 msg.className = 'text-xs text-center font-semibold text-red-600';
             }
         });
+
+        window.adminTrackShiprocket = async (orderId) => {
+            try {
+                const res = await fetch(`${API_BASE}/api/shiprocket/track/${orderId}`);
+                let data = null;
+                const contentType = res.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
+                    data = await res.json();
+                } else {
+                    return alert(`📦 TRACKING NOTICE:\nOrder ID: ${orderId}\nStatus: Package dispatches soon.\nTracking details will appear as soon as the courier picks up the order.`);
+                }
+
+                if (data && data.success && data.tracking) {
+                    const t = data.tracking;
+                    const activityStr = (t.scans || []).map(s => `• ${s.date || ''}: ${s.activity || s.location}`).join('\n');
+                    alert(`📦 SHIPROCKET LIVE STATUS:\n----------------------------------------\nOrder ID: ${orderId}\nStatus: ${t.current_status || data.status}\nCourier Partner: ${t.courier_name || 'N/A'}\nAWB Tracking No: ${t.awb_code || 'N/A'}\n----------------------------------------\nTracking Checkpoints:\n${activityStr || 'Package dispatches soon. Checkpoints will appear automatically.'}`);
+                } else {
+                    alert(`Tracking Notice: ${(data && data.error) || 'Tracking details not available yet.'}`);
+                }
+            } catch (err) {
+                alert(`Tracking Notice: Order package dispatches soon. Detailed checkpoints will update automatically.`);
+            }
+        };
 
         // Disable right click & developer tool shortcuts
         document.addEventListener('contextmenu', e => e.preventDefault());

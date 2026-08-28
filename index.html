@@ -340,7 +340,7 @@
 
                         <p
                             class="text-sm font-semibold text-brand-600 mb-8 flex items-center justify-center lg:justify-start gap-2">
-                            <i class="fa-solid fa-truck-fast"></i> 🚚 5–7 दिनों के भीतर पुस्तक आपके पते पर पहुँच जाएगी।
+                            <i class="fa-solid fa-truck-fast"></i> 5–7 दिनों के भीतर पुस्तक आपके पते पर पहुँच जाएगी।
                         </p>
 
                         <!-- CTA Buttons -->
@@ -824,7 +824,8 @@
                     <div class="relative px-6 py-12 sm:px-12 sm:py-16 text-center text-white">
                         <h2 class="text-3xl md:text-4xl font-serif font-bold mb-4">अभी प्री-ऑर्डर करें</h2>
                         <p class="text-lg text-brand-200 mb-8 max-w-2xl mx-auto">हार्डकवर लॉन्च ऑफर के अंतर्गत <strong
-                                id="footer-book-price" class="text-brand-400">₹399</strong> में अपनी प्रति सुरक्षित करें।</p>
+                                id="footer-book-price" class="text-brand-400">₹399</strong> में अपनी प्रति सुरक्षित
+                            करें।</p>
                         <a href="#"
                             class="auth-required inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-brand-900 bg-brand-400 hover:bg-white shadow-xl transition-all transform hover:-translate-y-1 order-now-btn"
                             data-redirect="order.html">
@@ -1509,7 +1510,7 @@
             async function fetchFrontendSettings() {
                 try {
                     const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-                        ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
+                        ? (window.location.port === '5000' ? '' : 'http://localhost:5000')
                         : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
                     const res = await fetch(`${API_BASE}/api/settings/frontend`);
                     const data = await res.json();

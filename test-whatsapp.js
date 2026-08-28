@@ -1,5 +1,5 @@
-const { sendWhatsAppOtp, sendWhatsAppOrderConfirmation } = require('./api/services/whatsappService');
 require('dotenv').config();
+const { sendWhatsAppOtp, sendWhatsAppOrderConfirmation } = require('./api/services/whatsappService');
 
 const testMobile = process.argv[2] || '9876543210';
 

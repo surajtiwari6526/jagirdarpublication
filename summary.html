@@ -78,7 +78,7 @@
             <div class="mt-8 flex flex-wrap gap-3">
                 <a href="address.html" class="rounded-2xl border border-brand-300 px-6 py-3 text-base font-semibold text-brand-800 transition hover:bg-brand-50">Back</a>
                 <button type="button" id="pay-now-btn" class="rounded-2xl bg-brand-800 px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-900 flex items-center gap-2">
-                    <span>Confirm Order</span>
+                    <span>Place Order</span>
                     <i class="fa-solid fa-lock"></i>
                 </button>
             </div>
@@ -265,6 +265,7 @@
                 const shippingMobile = addressData.phone || '';
                 const shippingAddress = addressData.address || '';
                 const shippingCity = addressData.city || '';
+                const shippingState = addressData.state || '';
                 const shippingPincode = addressData.pincode || '';
 
                 if (!shippingName || !shippingMobile || !shippingAddress) {
@@ -293,6 +294,7 @@
                             shippingMobile,
                             shippingAddress,
                             shippingCity,
+                            shippingState,
                             shippingPincode,
                             voucherCode: appliedCode,
                             paymentMethod: 'Razorpay'
@@ -356,7 +358,7 @@
                             } catch (err) {
                                 alert(err.message);
                                 payNowBtn.disabled = false;
-                                payNowBtn.innerHTML = '<span>Pay via Razorpay</span><i class="fa-solid fa-lock"></i>';
+                                payNowBtn.innerHTML = '<span>Place Order</span><i class="fa-solid fa-lock"></i>';
                             }
                         },
                         prefill: {
@@ -372,14 +374,14 @@
                     rzp.on('payment.failed', function (response) {
                         alert('Payment Failed: ' + response.error.description);
                         payNowBtn.disabled = false;
-                        payNowBtn.innerHTML = '<span>Pay via Razorpay</span><i class="fa-solid fa-lock"></i>';
+                        payNowBtn.innerHTML = '<span>Place Order</span><i class="fa-solid fa-lock"></i>';
                     });
                     rzp.open();
 
                 } catch (err) {
                     alert(err.message);
                     payNowBtn.disabled = false;
-                    payNowBtn.innerHTML = '<span>Pay via Razorpay</span><i class="fa-solid fa-lock"></i>';
+                    payNowBtn.innerHTML = '<span>Place Order</span><i class="fa-solid fa-lock"></i>';
                 }
             });
         }

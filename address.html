@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -46,22 +47,29 @@
                     <input id="phone" type="tel" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
                 </div>
                 <div>
-                    <label class="mb-2 block text-sm font-semibold text-brand-800">Address</label>
+                    <label class="mb-2 block text-sm font-semibold text-brand-800">Address (House No, Building, Street)</label>
                     <textarea id="address" rows="3" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200"></textarea>
                 </div>
-                <div class="grid md:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                        <label class="mb-2 block text-sm font-semibold text-brand-800">City</label>
-                        <input id="city" type="text" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
+                        <label class="mb-2 flex items-center justify-between text-sm font-semibold text-brand-800">
+                            <span>PIN Code</span>
+                            <span id="pin-status" class="text-xs font-normal"></span>
+                        </label>
+                        <input id="pincode" type="text" maxlength="6" inputmode="numeric" placeholder="6-digit PIN" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition">
                     </div>
                     <div>
-                        <label class="mb-2 block text-sm font-semibold text-brand-800">PIN Code</label>
-                        <input id="pincode" type="text" required class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200">
+                        <label class="mb-2 block text-sm font-semibold text-brand-800">City / District</label>
+                        <input id="city" type="text" required placeholder="City or District" class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition">
+                    </div>
+                    <div>
+                        <label class="mb-2 block text-sm font-semibold text-brand-800">State</label>
+                        <input id="state" type="text" required placeholder="State" class="w-full rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition">
                     </div>
                 </div>
 
                 <div class="flex flex-wrap gap-3 pt-4">
-                    <button type="submit" class="rounded-2xl bg-brand-800 px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-900">Save & Continue</button>
+                    <button type="submit" class="rounded-2xl bg-brand-800 px-6 py-3 text-base font-semibold text-white transition hover:bg-brand-900 shadow-md">Save & Continue</button>
                     <a href="order.html" class="rounded-2xl border border-brand-300 px-6 py-3 text-base font-semibold text-brand-800 transition hover:bg-brand-50">Back</a>
                 </div>
             </form>
@@ -74,6 +82,10 @@
         const form = document.getElementById('address-form');
         const message = document.getElementById('address-message');
         const savedAddressContainer = document.getElementById('saved-address-container');
+        const pincodeInput = document.getElementById('pincode');
+        const cityInput = document.getElementById('city');
+        const stateInput = document.getElementById('state');
+        const pinStatus = document.getElementById('pin-status');
 
         const getAuth = () => {
             try { return JSON.parse(sessionStorage.getItem('bookAuth') || localStorage.getItem('bookAuth') || 'null'); } 
@@ -94,6 +106,119 @@
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
             : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
+
+        // --- High-Speed Automatic PIN Code Fetcher ---
+        const pincodeCache = {};
+
+        const fetchFastestPincode = (pinClean) => {
+            return new Promise((resolve, reject) => {
+                let settled = false;
+                let errors = 0;
+
+                const checkWin = (data) => {
+                    if (!settled && data && (data.city || data.state)) {
+                        settled = true;
+                        resolve(data);
+                    }
+                };
+
+                const checkFail = () => {
+                    errors++;
+                    if (errors >= 2 && !settled) {
+                        reject(new Error('All pincode APIs failed'));
+                    }
+                };
+
+                // Ultra-Fast API 1: Zippopotam CDN (~80ms)
+                fetch(`https://api.zippopotam.us/in/${pinClean}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .then(data => {
+                        if (data && data.places && data.places.length > 0) {
+                            checkWin({
+                                city: data.places[0]['place name'] || '',
+                                state: data.places[0]['state'] || ''
+                            });
+                        } else checkFail();
+                    })
+                    .catch(checkFail);
+
+                // API 2: India Postal Pincode API (~300ms)
+                fetch(`https://api.postalpincode.in/pincode/${pinClean}`)
+                    .then(res => res.ok ? res.json() : null)
+                    .then(data => {
+                        if (Array.isArray(data) && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                            const po = data[0].PostOffice[0];
+                            checkWin({
+                                city: po.District || po.Block || po.Circle || po.Name || '',
+                                state: po.State || ''
+                            });
+                        } else checkFail();
+                    })
+                    .catch(checkFail);
+            });
+        };
+
+        const fetchPincodeDetails = async (pin) => {
+            const pinClean = pin.replace(/\D/g, '');
+            if (pinClean.length !== 6) {
+                if (pinStatus) pinStatus.innerHTML = '';
+                return;
+            }
+
+            // 1. Instant Cache Hit (0ms)
+            if (pincodeCache[pinClean]) {
+                const { city, state } = pincodeCache[pinClean];
+                if (cityInput && city) cityInput.value = city;
+                if (stateInput && state) stateInput.value = state;
+                if (pinStatus) {
+                    pinStatus.className = 'text-xs text-emerald-600 font-bold flex items-center gap-1';
+                    pinStatus.innerHTML = '<i class="fa-solid fa-circle-check"></i> Auto-filled';
+                }
+                return;
+            }
+
+            if (pinStatus) {
+                pinStatus.className = 'text-xs text-brand-600 font-medium flex items-center gap-1';
+                pinStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-brand-500"></i> Fetching...';
+            }
+
+            try {
+                const result = await fetchFastestPincode(pinClean);
+                pincodeCache[pinClean] = result;
+
+                if (cityInput && result.city) cityInput.value = result.city;
+                if (stateInput && result.state) stateInput.value = result.state;
+
+                if (pinStatus) {
+                    pinStatus.className = 'text-xs text-emerald-600 font-bold flex items-center gap-1';
+                    pinStatus.innerHTML = '<i class="fa-solid fa-circle-check"></i> Auto-filled';
+                }
+            } catch (err) {
+                if (pinStatus) {
+                    pinStatus.className = 'text-xs text-amber-600 font-medium';
+                    pinStatus.innerHTML = 'Manual entry';
+                }
+            }
+        };
+
+        if (pincodeInput) {
+            pincodeInput.addEventListener('input', (e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                e.target.value = val;
+                if (val.length === 6) {
+                    fetchPincodeDetails(val);
+                } else if (pinStatus) {
+                    pinStatus.innerHTML = '';
+                }
+            });
+
+            pincodeInput.addEventListener('blur', () => {
+                const val = pincodeInput.value.replace(/\D/g, '');
+                if (val.length === 6 && (!cityInput.value || !stateInput.value)) {
+                    fetchPincodeDetails(val);
+                }
+            });
+        }
 
         const loadSavedAddresses = async () => {
             let addresses = [];
@@ -119,6 +244,7 @@
                     mobile: auth.mobile,
                     address: auth.address,
                     city: auth.city,
+                    state: auth.state || '',
                     pincode: auth.pincode,
                     is_default: 1
                 });
@@ -129,14 +255,15 @@
                 
                 let html = '<div class="mb-8 space-y-4">';
                 addresses.forEach(addr => {
+                    const locationText = `${addr.city}${addr.state ? ', ' + addr.state : ''} - ${addr.pincode}`;
                     html += `
                         <div class="p-5 rounded-2xl bg-brand-50 border ${addr.is_default ? 'border-brand-500 shadow-md' : 'border-brand-200'} relative">
                             ${addr.is_default ? '<span class="absolute top-0 right-0 bg-brand-800 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl uppercase tracking-wider">Default</span>' : ''}
                             <h3 class="text-brand-900 font-bold mb-1">${addr.name}</h3>
                             <p class="text-brand-800 text-sm mb-1">${addr.address}</p>
-                            <p class="text-brand-800 text-sm mb-1">${addr.city} - ${addr.pincode}</p>
+                            <p class="text-brand-800 text-sm mb-1 font-medium text-brand-700">${locationText}</p>
                             <p class="text-brand-800 text-sm mb-4 font-medium"><i class="fa-solid fa-phone mr-1 text-brand-500"></i> ${addr.mobile}</p>
-                            <button class="deliver-saved-btn w-full rounded-xl bg-green-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 shadow" data-addr='${JSON.stringify({name: addr.name, phone: addr.mobile, address: addr.address, city: addr.city, pincode: addr.pincode}).replace(/'/g, "&apos;")}'>
+                            <button class="deliver-saved-btn w-full rounded-xl bg-green-600 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-green-700 shadow" data-addr='${JSON.stringify({name: addr.name, phone: addr.mobile, address: addr.address, city: addr.city, state: addr.state || '', pincode: addr.pincode}).replace(/'/g, "&apos;")}'>
                                 Deliver to this address
                             </button>
                         </div>
@@ -175,6 +302,7 @@
                 phone: document.getElementById('phone').value.trim(),
                 address: document.getElementById('address').value.trim(),
                 city: document.getElementById('city').value.trim(),
+                state: document.getElementById('state').value.trim(),
                 pincode: document.getElementById('pincode').value.trim()
             };
             
@@ -192,11 +320,12 @@
                             mobile: addressData.phone,
                             address: addressData.address,
                             city: addressData.city,
+                            state: addressData.state,
                             pincode: addressData.pincode
                         })
                     });
                     
-                    // Fire and forget legacy profile update for backward compatibility just in case
+                    // Fire and forget legacy profile update for backward compatibility
                     fetch(`${API_BASE}/api/auth/profile`, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -226,6 +355,3 @@
     </script>
 </body>
 </html>
-
-
-

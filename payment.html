@@ -103,13 +103,15 @@
 
             const token = localStorage.getItem('token') || localStorage.getItem('bookAuthToken') || '';
 
+            const addressData = JSON.parse(sessionStorage.getItem('bookAddress') || '{}');
             const quantity = parseInt(sessionStorage.getItem('bookQuantity') || '1', 10);
             const voucherCode = sessionStorage.getItem('bookAppliedVoucher') || '';
-            const shippingName = sessionStorage.getItem('shippingName') || '';
-            const shippingMobile = sessionStorage.getItem('shippingMobile') || '';
-            const shippingAddress = sessionStorage.getItem('shippingAddress') || '';
-            const shippingCity = sessionStorage.getItem('shippingCity') || '';
-            const shippingPincode = sessionStorage.getItem('shippingPincode') || '';
+            const shippingName = addressData.name || sessionStorage.getItem('shippingName') || '';
+            const shippingMobile = addressData.phone || sessionStorage.getItem('shippingMobile') || '';
+            const shippingAddress = addressData.address || sessionStorage.getItem('shippingAddress') || '';
+            const shippingCity = addressData.city || sessionStorage.getItem('shippingCity') || '';
+            const shippingState = addressData.state || sessionStorage.getItem('shippingState') || '';
+            const shippingPincode = addressData.pincode || sessionStorage.getItem('shippingPincode') || '';
 
             const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
                 ? (window.location.port === '5000' ? '' : 'http://localhost:5000') 
@@ -131,6 +133,7 @@
                         shippingMobile,
                         shippingAddress,
                         shippingCity,
+                        shippingState,
                         shippingPincode,
                         voucherCode,
                         paymentMethod: methodLabel

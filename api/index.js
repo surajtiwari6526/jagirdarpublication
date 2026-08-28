@@ -23,6 +23,7 @@ try {
 const db = getFirestore();
 const { sendWhatsAppOtp, sendWhatsAppOrderConfirmation, sendWhatsAppBill } = require('./services/whatsappService');
 const { sendEmailOtp, sendOrderBillEmail } = require('./services/emailService');
+const { createShiprocketOrder, generateAwbCode, trackShipment } = require('./services/shiprocketService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -240,6 +241,14 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
         const smsResult = await sendWhatsAppOtp(cleanMobile, otp, (name || '').trim());
 
+        if (!smsResult.success) {
+            return res.status(400).json({
+                success: false,
+                error: smsResult.error || 'Failed to send WhatsApp OTP. Please ensure your WhatsApp access token is valid.',
+                provider: smsResult.provider
+            });
+        }
+
         res.json({
             success: true,
             message: `OTP sent successfully to WhatsApp (+91 ${cleanMobile})`,
@@ -444,7 +453,13 @@ app.post('/api/auth/send-signup-mobile-otp', async (req, res) => {
             created_at: Date.now()
         }, { merge: true });
 
-        await sendWhatsAppOtp(cleanMobile, otp);
+        const smsResult = await sendWhatsAppOtp(cleanMobile, otp);
+        if (!smsResult.success) {
+            return res.status(400).json({
+                success: false,
+                error: smsResult.error || 'Failed to send WhatsApp OTP. Check Meta Access Token in .env.'
+            });
+        }
         res.json({ success: true, message: 'Signup OTP sent successfully to your WhatsApp.' });
     } catch (err) {
         console.error('[Send Mobile OTP Error]:', err);
@@ -1171,7 +1186,7 @@ app.get('/api/auth/addresses', authenticateUser, async (req, res) => {
 // Add a new address
 app.post('/api/auth/addresses', authenticateUser, async (req, res) => {
     try {
-        const { name, mobile, address, city, pincode } = req.body;
+        const { name, mobile, address, city, state, pincode } = req.body;
         const userId = req.user.id;
 
         if (!name || !mobile || !address || !city || !pincode) {
@@ -1185,7 +1200,7 @@ app.post('/api/auth/addresses', authenticateUser, async (req, res) => {
         const addressId = 'ADDR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
         const now = new Date().toISOString();
 
-        const newAddress = { id: addressId, user_id: userId, name, mobile, address, city, pincode, is_default: isDefault, created_at: now };
+        const newAddress = { id: addressId, user_id: userId, name, mobile, address, city, state: state || '', pincode, is_default: isDefault, created_at: now };
         await db.collection('user_addresses').doc(addressId).set(newAddress);
         res.json({ success: true, message: 'Address saved successfully', address: newAddress });
     } catch (err) {
@@ -1344,7 +1359,7 @@ app.post('/api/vouchers/apply', async (req, res) => {
 // Create Draft Order
 app.post('/api/orders/create', async (req, res) => {
     try {
-        const { quantity, shippingName, shippingMobile, shippingAddress, shippingCity, shippingPincode, voucherCode, paymentMethod } = req.body;
+        const { quantity, shippingName, shippingMobile, shippingAddress, shippingCity, shippingState, shippingPincode, voucherCode, paymentMethod } = req.body;
         
         // Optional auth
         let userId = 'GUEST-' + crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -1397,7 +1412,7 @@ app.post('/api/orders/create', async (req, res) => {
         const createdOrder = {
             id: orderId, user_id: userId, book_title: 'ब्रह्मांशावतार श्री खेतेश्वर दाता', quantity: qty, unit_price: unitPrice, discount_amount: discount, total_amount: totalAmount,
             applied_voucher: voucherCode || '', shipping_name: shippingName || userName, shipping_mobile: shippingMobile || userMobile, shipping_address: shippingAddress || '', shipping_city: shippingCity || '',
-            shipping_pincode: shippingPincode || '', payment_method: paymentMethod || 'UPI', status: 'PENDING', created_at: now
+            shipping_state: shippingState || 'Rajasthan', shipping_pincode: shippingPincode || '', payment_method: paymentMethod || 'UPI', status: 'PENDING', created_at: now
         };
 
         await db.collection('orders').doc(orderId).set(createdOrder);
@@ -1706,6 +1721,40 @@ app.post('/api/payment/razorpay/verify', async (req, res) => {
                 console.error('[Send WhatsApp Bill Error]:', waErr);
             }
         }
+
+        // Auto Sync with Shiprocket if credentials configured
+        (async () => {
+            try {
+                const settingsDoc = await db.collection('settings').doc('shiprocket').get();
+                const settings = settingsDoc.exists ? settingsDoc.data() : {};
+                const hasCreds = settings.email || settings.user || process.env.SHIPROCKET_EMAIL || process.env.SHIPROCKET_USER;
+                if (hasCreds) {
+                    const srRes = await createShiprocketOrder(order, settings);
+                    if (srRes.success) {
+                        const srUpdate = {
+                            shiprocket_order_id: srRes.shiprocket_order_id,
+                            shipment_id: srRes.shipment_id,
+                            shiprocket_status: srRes.status || 'CREATED'
+                        };
+                        if (srRes.shipment_id) {
+                            const awbRes = await generateAwbCode(srRes.shipment_id, settings);
+                            if (awbRes.success) {
+                                srUpdate.awb_code = awbRes.awb_code;
+                                srUpdate.courier_name = awbRes.courier_name;
+                                srUpdate.tracking_number = awbRes.awb_code;
+                                srUpdate.status = 'IN_TRANSIT';
+                            }
+                        }
+                        await orderRef.update(srUpdate);
+                        console.log(`[Auto Shiprocket]: Order ${orderId} synced to Shiprocket (ID: ${srRes.shiprocket_order_id})`);
+                    } else {
+                        console.warn(`[Auto Shiprocket Warning]: ${srRes.error}`);
+                    }
+                }
+            } catch (srErr) {
+                console.warn('[Auto Shiprocket Order Error]:', srErr.message);
+            }
+        })();
 
         res.json({
             success: true,
@@ -2051,11 +2100,44 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
         const updatedDoc = await db.collection('orders').doc(id).get();
         const updated = { id: updatedDoc.id, ...updatedDoc.data() };
 
-        if (status === 'PAID' && updated.shipping_mobile) {
-            try {
-                await sendWhatsAppOrderConfirmation(updated, updated.shipping_mobile);
-            } catch (waErr) {
-                console.error('[Admin Status Update - WhatsApp Confirmation Error]:', waErr);
+        if (status === 'PAID') {
+            if (updated.shipping_mobile) {
+                try {
+                    await sendWhatsAppOrderConfirmation(updated, updated.shipping_mobile);
+                } catch (waErr) {
+                    console.error('[Admin Status Update - WhatsApp Confirmation Error]:', waErr);
+                }
+            }
+
+            // Auto-Sync to Shiprocket if not already synced
+            if (!updated.shiprocket_order_id) {
+                (async () => {
+                    try {
+                        const settingsDoc = await db.collection('settings').doc('shiprocket').get();
+                        const settings = settingsDoc.exists ? settingsDoc.data() : {};
+                        const srRes = await createShiprocketOrder(updated, settings);
+                        if (srRes.success) {
+                            const srUpdate = {
+                                shiprocket_order_id: srRes.shiprocket_order_id,
+                                shipment_id: srRes.shipment_id,
+                                shiprocket_status: srRes.status || 'CREATED'
+                            };
+                            if (srRes.shipment_id) {
+                                const awbRes = await generateAwbCode(srRes.shipment_id, settings);
+                                if (awbRes.success) {
+                                    srUpdate.awb_code = awbRes.awb_code;
+                                    srUpdate.courier_name = awbRes.courier_name;
+                                    srUpdate.tracking_number = awbRes.awb_code;
+                                    srUpdate.status = 'IN_TRANSIT';
+                                }
+                            }
+                            await db.collection('orders').doc(id).update(srUpdate);
+                            console.log(`[Admin Auto Shiprocket]: Order ${id} synced to Shiprocket (ID: ${srRes.shiprocket_order_id})`);
+                        }
+                    } catch (srErr) {
+                        console.warn('[Admin Auto Shiprocket Error]:', srErr.message);
+                    }
+                })();
             }
         }
 
@@ -2408,6 +2490,244 @@ app.delete('/api/account/delete', authenticateUser, async (req, res) => {
     } catch (err) {
         console.error('[Delete Account Error]:', err);
         res.status(500).json({ success: false, error: 'Failed to delete account.' });
+    }
+});
+
+// ==========================================
+// SHIPROCKET API AUTOMATED LOGISTICS ENDPOINTS
+// ==========================================
+
+// 1. Create / Sync Shiprocket Order (Admin or User)
+app.post('/api/shiprocket/create-order', async (req, res) => {
+    try {
+        const { orderId } = req.body;
+        if (!orderId) return res.status(400).json({ success: false, error: 'Order ID is required.' });
+
+        const orderRef = db.collection('orders').doc(orderId);
+        const orderDoc = await orderRef.get();
+        if (!orderDoc.exists) return res.status(404).json({ success: false, error: 'Order not found.' });
+
+        const order = { id: orderDoc.id, ...orderDoc.data() };
+
+        // Fetch settings if available
+        const settingsDoc = await db.collection('settings').doc('shiprocket').get();
+        const settings = settingsDoc.exists ? settingsDoc.data() : {};
+
+        const srRes = await createShiprocketOrder(order, settings);
+
+        if (!srRes.success) {
+            return res.status(400).json({ success: false, error: srRes.error, details: srRes.raw });
+        }
+
+        const updateData = {
+            shiprocket_order_id: srRes.shiprocket_order_id,
+            shipment_id: srRes.shipment_id,
+            shiprocket_status: srRes.status || 'CREATED',
+            updated_at: new Date().toISOString()
+        };
+
+        if (srRes.awb_code) {
+            updateData.awb_code = srRes.awb_code;
+            updateData.tracking_number = srRes.awb_code;
+            updateData.courier_name = srRes.courier_name || '';
+            updateData.status = 'IN_TRANSIT';
+        } else if (srRes.shipment_id) {
+            // Attempt to assign AWB automatically
+            const awbRes = await generateAwbCode(srRes.shipment_id);
+            if (awbRes.success) {
+                updateData.awb_code = awbRes.awb_code;
+                updateData.tracking_number = awbRes.awb_code;
+                updateData.courier_name = awbRes.courier_name || '';
+                updateData.status = 'IN_TRANSIT';
+            }
+        }
+
+        await orderRef.update(updateData);
+        const updatedDoc = await orderRef.get();
+
+        res.json({
+            success: true,
+            message: 'Order synced with Shiprocket successfully!',
+            shiprocket: srRes,
+            order: { id: updatedDoc.id, ...updatedDoc.data() }
+        });
+    } catch (err) {
+        console.error('[Shiprocket Create Route Error]:', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// 2. Fetch Live Tracking (User & Admin)
+app.get('/api/shiprocket/track/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const orderRef = db.collection('orders').doc(orderId);
+        const orderDoc = await orderRef.get();
+
+        if (!orderDoc.exists) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+
+        const order = { id: orderDoc.id, ...orderDoc.data() };
+        const awbCode = order.awb_code || (order.tracking_number !== 'PENDING' ? order.tracking_number : null);
+        const srOrderId = order.shiprocket_order_id;
+
+        if (!awbCode && !srOrderId) {
+            return res.json({
+                success: true,
+                orderId: order.id,
+                status: order.status,
+                tracking: {
+                    current_status: order.status === 'DELIVERED' ? 'DELIVERED' : (order.status === 'IN_TRANSIT' ? 'IN TRANSIT' : 'PROCESSING'),
+                    awb_code: order.tracking_number || 'N/A',
+                    courier_name: order.courier_name || 'Standard Courier',
+                    scans: []
+                }
+            });
+        }
+
+        const settingsDoc = await db.collection('settings').doc('shiprocket').get();
+        const settings = settingsDoc.exists ? settingsDoc.data() : {};
+
+        const trackingRes = await trackShipment(awbCode, srOrderId, settings);
+
+        if (trackingRes.success) {
+            // Map Shiprocket Status to Platform Status
+            let platformStatus = order.status;
+            const srStatus = (trackingRes.current_status || '').toUpperCase();
+            if (srStatus.includes('DELIVERED')) {
+                platformStatus = 'DELIVERED';
+            } else if (srStatus.includes('TRANSIT') || srStatus.includes('OUT FOR DELIVERY') || srStatus.includes('DISPATCHED') || srStatus.includes('PICKED UP')) {
+                platformStatus = 'IN_TRANSIT';
+            }
+
+            // Sync to Firestore
+            await orderRef.update({
+                shiprocket_status: trackingRes.current_status,
+                courier_name: trackingRes.courier_name || order.courier_name || '',
+                awb_code: trackingRes.awb_code || awbCode || '',
+                status: platformStatus,
+                tracking_scans: trackingRes.scans || [],
+                last_tracked_at: new Date().toISOString()
+            });
+
+            return res.json({
+                success: true,
+                orderId: order.id,
+                status: platformStatus,
+                tracking: trackingRes
+            });
+        } else {
+            return res.json({
+                success: true,
+                orderId: order.id,
+                status: order.status,
+                tracking: {
+                    current_status: order.shiprocket_status || order.status,
+                    awb_code: awbCode || 'N/A',
+                    courier_name: order.courier_name || 'Shiprocket Logistics',
+                    scans: order.tracking_scans || []
+                }
+            });
+        }
+    } catch (err) {
+        console.error('[Shiprocket Track Route Error]:', err);
+        res.status(500).json({ success: false, error: 'Failed to fetch shipment tracking.' });
+    }
+});
+
+// 3. Shiprocket Webhook Endpoint for Automated Real-Time Status Updates
+app.post('/api/shiprocket/webhook', async (req, res) => {
+    try {
+        const body = req.body || {};
+        console.log('[Shiprocket Webhook Received]:', body);
+
+        const orderId = body.order_id || body.custom_order_id;
+        const awb = body.awb || body.awb_code;
+        const currentStatus = (body.current_status || body.status || '').toUpperCase();
+        const courierName = body.courier_name || '';
+
+        if (!orderId && !awb) {
+            return res.status(200).json({ success: true, message: 'Webhook received but missing order identifier.' });
+        }
+
+        let orderRef = null;
+        if (orderId) {
+            orderRef = db.collection('orders').doc(orderId);
+        } else if (awb) {
+            const snap = await db.collection('orders').where('awb_code', '==', awb).limit(1).get();
+            if (!snap.empty) orderRef = snap.docs[0].ref;
+        }
+
+        if (orderRef) {
+            const doc = await orderRef.get();
+            if (doc.exists) {
+                let platformStatus = doc.data().status;
+                if (currentStatus.includes('DELIVERED')) {
+                    platformStatus = 'DELIVERED';
+                } else if (currentStatus.includes('TRANSIT') || currentStatus.includes('OUT FOR DELIVERY') || currentStatus.includes('PICKED UP')) {
+                    platformStatus = 'IN_TRANSIT';
+                }
+
+                await orderRef.update({
+                    shiprocket_status: currentStatus,
+                    courier_name: courierName || doc.data().courier_name || '',
+                    awb_code: awb || doc.data().awb_code || '',
+                    status: platformStatus,
+                    last_webhook_at: new Date().toISOString()
+                });
+                console.log(`[Shiprocket Webhook Synced]: Order ${doc.id} updated to ${platformStatus} (${currentStatus})`);
+            }
+        }
+
+        res.status(200).json({ success: true, message: 'Webhook processed successfully' });
+    } catch (err) {
+        console.error('[Shiprocket Webhook Error]:', err);
+        res.status(500).json({ success: false, error: 'Webhook processing failed' });
+    }
+});
+
+// 4. Shiprocket Settings Get & Save (Admin)
+app.get('/api/admin/shiprocket/settings', async (req, res) => {
+    try {
+        const doc = await db.collection('settings').doc('shiprocket').get();
+        const data = doc.exists ? doc.data() : {};
+        const settings = {
+            email: data.email || (process.env.SHIPROCKET_EMAIL || '').replace(/^["']|["']$/g, ''),
+            pickup_location: data.pickup_location || (process.env.SHIPROCKET_PICKUP_LOCATION || 'Gaj Ganesh').replace(/^["']|["']$/g, ''),
+            length: data.length || 20,
+            breadth: data.breadth || 14,
+            height: data.height || 3,
+            weight: data.weight || 0.5,
+            auto_create_on_payment: data.auto_create_on_payment !== undefined ? data.auto_create_on_payment : true,
+            has_password: Boolean(data.password || process.env.SHIPROCKET_PASSWORD)
+        };
+        res.json({ success: true, settings });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to fetch Shiprocket settings.' });
+    }
+});
+
+app.post('/api/admin/shiprocket/settings', async (req, res) => {
+    try {
+        const { email, password, pickup_location, length, breadth, height, weight, auto_create_on_payment } = req.body;
+        const newSettings = {
+            email: (email || '').trim(),
+            pickup_location: (pickup_location || 'Gaj Ganesh').trim(),
+            length: Number(length) || 20,
+            breadth: Number(breadth) || 14,
+            height: Number(height) || 3,
+            weight: Number(weight) || 0.5,
+            auto_create_on_payment: Boolean(auto_create_on_payment),
+            updated_at: new Date().toISOString()
+        };
+        if (password && password.trim()) {
+            newSettings.password = password.trim();
+        }
+        await db.collection('settings').doc('shiprocket').set(newSettings, { merge: true });
+        res.json({ success: true, message: 'Shiprocket settings saved successfully.', settings: newSettings });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to save Shiprocket settings.' });
     }
 });
 
