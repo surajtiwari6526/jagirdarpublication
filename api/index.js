@@ -58,6 +58,91 @@ app.use(cors(corsOptions));
 
 
 app.use(express.json());
+
+// --- Security: Anti-SQL Injection & Malicious Script Input Sanitization ---
+function sanitizeInput(value) {
+    if (typeof value === 'string') {
+        return value
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/[\0\x08\x09\x1a\n\r"'\\\%]/g, (char) => {
+                switch (char) {
+                    case "\0": return "";
+                    case "\n": return "\n";
+                    case "\r": return "\r";
+                    case "\"": return "&quot;";
+                    case "'": return "&#39;";
+                    default: return char;
+                }
+            })
+            .trim();
+    } else if (Array.isArray(value)) {
+        return value.map(sanitizeInput);
+    } else if (typeof value === 'object' && value !== null) {
+        const sanitized = {};
+        for (const [key, val] of Object.entries(value)) {
+            if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+            sanitized[key] = sanitizeInput(val);
+        }
+        return sanitized;
+    }
+    return value;
+}
+
+app.use((req, res, next) => {
+    if (req.body) req.body = sanitizeInput(req.body);
+    if (req.query) req.query = sanitizeInput(req.query);
+    if (req.params) req.params = sanitizeInput(req.params);
+    next();
+});
+
+// --- Security: Strict OTP Rate Limiting (Max 3 requests per 12 hours) ---
+async function checkOtpRateLimit(identifier) {
+    if (!identifier) return { allowed: true };
+    const rawKey = String(identifier).trim().toLowerCase();
+    const key = rawKey.replace(/\D/g, '').slice(-10) || rawKey;
+    const docRef = db.collection('otp_rate_limits').doc(key);
+    const docSnap = await docRef.get();
+    const now = Date.now();
+    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+
+    if (docSnap.exists) {
+        const data = docSnap.data();
+        const firstReqTime = data.first_request_at || now;
+        const timePassed = now - firstReqTime;
+
+        if (timePassed < TWELVE_HOURS) {
+            if (data.count >= 3) {
+                const hoursLeft = Math.ceil((TWELVE_HOURS - timePassed) / (60 * 60 * 1000));
+                return {
+                    allowed: false,
+                    error: `OTP limit reached. You can request OTP maximum 3 times. Please try again after ${hoursLeft} hour(s).`
+                };
+            }
+            await docRef.update({
+                count: data.count + 1,
+                last_request_at: now
+            });
+        } else {
+            await docRef.set({
+                identifier: key,
+                count: 1,
+                first_request_at: now,
+                last_request_at: now
+            });
+        }
+    } else {
+        await docRef.set({
+            identifier: key,
+            count: 1,
+            first_request_at: now,
+            last_request_at: now
+        });
+    }
+
+    return { allowed: true };
+}
+
 const rootDir = path.join(__dirname, '..');
 app.use(express.static(rootDir));
 
@@ -205,6 +290,12 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
         if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
             return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit Indian mobile number.' });
+        }
+
+        // Strict 12-Hour Rate Limit (Max 3 OTP requests)
+        const rateLimit = await checkOtpRateLimit(cleanMobile);
+        if (!rateLimit.allowed) {
+            return res.status(429).json({ success: false, error: rateLimit.error });
         }
 
         // Check if user is blocked by Admin
@@ -365,6 +456,11 @@ app.post('/api/auth/send-signup-otp', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit Indian mobile number.' });
         }
 
+        const rateLimit = await checkOtpRateLimit(cleanMobile);
+        if (!rateLimit.allowed) {
+            return res.status(429).json({ success: false, error: rateLimit.error });
+        }
+
         const userByMobileQuery = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
         let existingUser = false;
         if (!userByMobileQuery.empty) {
@@ -434,6 +530,11 @@ app.post('/api/auth/send-signup-mobile-otp', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Please enter a valid 10-digit Indian mobile number.' });
         }
 
+        const rateLimit = await checkOtpRateLimit(cleanMobile);
+        if (!rateLimit.allowed) {
+            return res.status(429).json({ success: false, error: rateLimit.error });
+        }
+
         const userByMobileQuery = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
         if (!userByMobileQuery.empty) {
             const uData = userByMobileQuery.docs[0].data();
@@ -496,6 +597,11 @@ app.post('/api/auth/send-signup-email-otp', async (req, res) => {
 
         if (!cleanEmail) {
             return res.status(400).json({ success: false, error: 'Valid email is required.' });
+        }
+
+        const rateLimit = await checkOtpRateLimit(cleanEmail);
+        if (!rateLimit.allowed) {
+            return res.status(429).json({ success: false, error: rateLimit.error });
         }
 
         const userByEmailQuery = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
@@ -851,6 +957,11 @@ app.post('/api/auth/forgot-password-otp', async (req, res) => {
         const { email, identifier, mobile } = req.body;
         const inputId = (identifier || email || mobile || '').trim();
         if (!inputId) return res.status(400).json({ success: false, error: 'Email or Mobile number is required.' });
+
+        const rateLimit = await checkOtpRateLimit(inputId);
+        if (!rateLimit.allowed) {
+            return res.status(429).json({ success: false, error: rateLimit.error });
+        }
 
         let user = null;
         const cleanEmail = inputId.toLowerCase();
