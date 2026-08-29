@@ -235,6 +235,14 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
         const smsResult = await sendWhatsAppOtp(cleanMobile, otp, (name || '').trim());
 
+        if (!smsResult.success) {
+            return res.status(400).json({
+                success: false,
+                error: smsResult.error || 'Failed to send WhatsApp OTP. Please ensure your WhatsApp access token is valid.',
+                provider: smsResult.provider
+            });
+        }
+
         res.json({
             success: true,
             message: `OTP sent successfully to WhatsApp (+91 ${cleanMobile})`,
@@ -439,7 +447,13 @@ app.post('/api/auth/send-signup-mobile-otp', async (req, res) => {
             created_at: Date.now()
         }, { merge: true });
 
-        await sendSmsOtp(cleanMobile, otp);
+        const smsResult = await sendSmsOtp(cleanMobile, otp);
+        if (!smsResult.success) {
+            return res.status(400).json({
+                success: false,
+                error: smsResult.error || 'Failed to send WhatsApp OTP. Check Meta Access Token in .env.'
+            });
+        }
         res.json({ success: true, message: 'Signup OTP sent successfully to your mobile.' });
     } catch (err) {
         console.error('[Send Mobile OTP Error]:', err);
