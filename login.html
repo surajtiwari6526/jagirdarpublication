@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Jagirdar Publications</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Firebase SDKs for Google Login -->
@@ -35,6 +35,7 @@
             }
         }
     </script>
+    <link rel="stylesheet" href="assets/css/app-theme.css">
 </head>
 <body class="bg-brand-50 font-sans text-gray-800 antialiased selection:bg-brand-200 selection:text-brand-900 min-h-screen flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
 
@@ -241,12 +242,13 @@
                 try {
                     const result = await auth.signInWithPopup(googleProvider);
                     const user = result.user;
+                    window.__googleIdToken = await user.getIdToken();
                     showStatus('Authenticating with server...', 'info');
 
                     const res = await fetch(`${API_BASE}/google-login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: user.email, name: user.displayName, firebaseUid: user.uid })
+                        body: JSON.stringify({ name: user.displayName, idToken: window.__googleIdToken })
                     });
                     const data = await res.json();
                     
@@ -370,7 +372,7 @@
                     const res = await fetch(`${API_BASE}/google-signup-complete`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, name, mobile, password, otp })
+                        body: JSON.stringify({ email, name, mobile, password, otp, idToken: window.__googleIdToken })
                     });
                     const data = await res.json();
                     

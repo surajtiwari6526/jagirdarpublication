@@ -5,18 +5,21 @@ const jwt = require('jsonwebtoken');
 const path = require('path');
 const { initializeApp, getApps, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 const Razorpay = require('razorpay');
 require('dotenv').config();
 
+// Firebase Admin credentials: FIREBASE_SERVICE_ACCOUNT (JSON string) -> local file -> default credentials
 try {
-    const serviceAccount = require('../firebaseServiceAccount.js');
-    if (getApps().length === 0) { 
-        initializeApp({
-            credential: cert(serviceAccount)
-        }); 
+    if (getApps().length === 0) {
+        if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+            initializeApp({ credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) });
+        } else {
+            initializeApp({ credential: cert(require('../firebaseServiceAccount.js')) });
+        }
     }
 } catch (error) {
-    console.warn("No serviceAccount found. Trying default initialization.", error);
+    console.warn('No service account found. Trying default initialization.', error.message);
     if (getApps().length === 0) { initializeApp(); }
 }
 
@@ -27,62 +30,55 @@ const { createShiprocketOrder, generateAwbCode, trackShipment } = require('./ser
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'jagirdar_publications_secret_jwt_key_2026';
 
-// Middleware - Robust CORS Configuration
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    } else {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    next();
-});
+// Secrets must come from the environment - never from source code.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required.');
+}
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'mukeshd1008raj@gmail.com').toLowerCase();
 
-const corsOptions = {
-    origin: true,
+// CORS: only our own sites (plus localhost for development)
+const EXTRA_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim()).filter(Boolean);
+const isAllowedOrigin = (origin) =>
+    !origin ||
+    EXTRA_ORIGINS.includes(origin) ||
+    /^https?:\/\/(www\.)?jagirdarpublication\.in$/.test(origin) ||
+    /^https:\/\/jagirdar[a-z0-9-]*\.vercel\.app$/.test(origin) ||
+    /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+app.use(cors({
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    credentials: true,
     optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
+}));
 
+// Keep the raw body for webhook signature checks (Razorpay)
+app.use(express.json({
+    limit: '200kb',
+    verify: (req, res, buf) => { req.rawBody = buf; }
+}));
 
-app.use(express.json());
-
-// --- Security: Anti-SQL Injection & Malicious Script Input Sanitization ---
-function sanitizeInput(value) {
+// --- Input hygiene ---
+// Strips HTML tags/control characters from free text. Secrets (passwords, tokens, OTPs) are left
+// untouched so they are never altered. Output is escaped where it is displayed.
+const RAW_KEYS = new Set(['password', 'newPassword', 'oldPassword', 'currentPassword', 'token', 'idToken', 'otp', 'emailOtp', 'razorpaySignature', 'razorpayPaymentId', 'razorpayOrderId']);
+function sanitizeInput(value, key) {
     if (typeof value === 'string') {
+        if (RAW_KEYS.has(key)) return value;
         return value
             .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-            .replace(/<[^>]+>/g, '')
-            .replace(/[\0\x08\x09\x1a\n\r"'\\\%]/g, (char) => {
-                switch (char) {
-                    case "\0": return "";
-                    case "\n": return "\n";
-                    case "\r": return "\r";
-                    case "\"": return "&quot;";
-                    case "'": return "&#39;";
-                    default: return char;
-                }
-            })
+            .replace(/<[^>]*>/g, '')
+            .replace(/[\0\x08\x1a]/g, '')
             .trim();
     } else if (Array.isArray(value)) {
-        return value.map(sanitizeInput);
+        return value.map(v => sanitizeInput(v, key));
     } else if (typeof value === 'object' && value !== null) {
         const sanitized = {};
-        for (const [key, val] of Object.entries(value)) {
-            if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-            sanitized[key] = sanitizeInput(val);
+        for (const [k, val] of Object.entries(value)) {
+            if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+            sanitized[k] = sanitizeInput(val, k);
         }
         return sanitized;
     }
@@ -90,11 +86,89 @@ function sanitizeInput(value) {
 }
 
 app.use((req, res, next) => {
-    if (req.body) req.body = sanitizeInput(req.body);
-    if (req.query) req.query = sanitizeInput(req.query);
-    if (req.params) req.params = sanitizeInput(req.params);
+    if (req.body && typeof req.body === 'object') req.body = sanitizeInput(req.body);
     next();
 });
+
+// --- Passwords: salted scrypt (legacy unsalted SHA-256 hashes still verify, then upgrade on login) ---
+const hashPassword = (password) => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
+    return `scrypt$${salt}$${hash}`;
+};
+const verifyPassword = (password, stored) => {
+    if (!stored || typeof password !== 'string') return { ok: false };
+    if (stored.startsWith('scrypt$')) {
+        const [, salt, hash] = stored.split('$');
+        const test = crypto.scryptSync(password, salt, 64);
+        const expected = Buffer.from(hash, 'hex');
+        return { ok: expected.length === test.length && crypto.timingSafeEqual(test, expected) };
+    }
+    const legacy = crypto.createHash('sha256').update(password).digest('hex');
+    return { ok: legacy === stored, needsUpgrade: legacy === stored };
+};
+
+// --- Brute-force protection for password logins (per account/identifier) ---
+const LOGIN_MAX_FAILS = 5;
+const LOGIN_LOCK_MS = 15 * 60 * 1000;
+async function checkLoginLock(scope, identifier) {
+    const ref = db.collection('login_attempts').doc(`${scope}_${crypto.createHash('sha1').update(String(identifier)).digest('hex')}`);
+    const snap = await ref.get();
+    const data = snap.exists ? snap.data() : null;
+    if (data && data.locked_until && data.locked_until > Date.now()) {
+        const mins = Math.ceil((data.locked_until - Date.now()) / 60000);
+        return { locked: true, ref, error: `Too many failed attempts. Try again in ${mins} minute(s).` };
+    }
+    return { locked: false, ref, data };
+}
+async function recordLoginFailure(lock) {
+    const fails = ((lock.data && lock.data.locked_until && lock.data.locked_until <= Date.now()) ? 0 : (lock.data && lock.data.fails) || 0) + 1;
+    const update = { fails, last_fail_at: Date.now() };
+    if (fails >= LOGIN_MAX_FAILS) { update.locked_until = Date.now() + LOGIN_LOCK_MS; update.fails = 0; }
+    await lock.ref.set(update);
+}
+async function clearLoginFailures(lock) {
+    if (lock.data) await lock.ref.delete().catch(() => {});
+}
+
+// Check an OTP against its stored session, locking the session after too many wrong guesses
+async function checkOtpWithLimit(collection, docId, session, entered, maxAttempts = 5) {
+    const ref = db.collection(collection).doc(docId);
+    if (!session || Date.now() > (session.expires_at || 0)) return { ok: false, error: 'Invalid or expired OTP.' };
+    if ((session.attempts || 0) >= maxAttempts) {
+        await ref.delete().catch(() => {});
+        return { ok: false, error: 'Too many incorrect attempts. Please request a new OTP.' };
+    }
+    if (session.otp_code !== String(entered || '').trim()) {
+        await ref.update({ attempts: (session.attempts || 0) + 1 }).catch(() => {});
+        return { ok: false, error: 'Invalid or expired OTP.' };
+    }
+    return { ok: true };
+}
+
+// --- Encrypt secrets we must store (e.g. Shiprocket password) ---
+const ENC_KEY = crypto.createHash('sha256').update(process.env.DATA_ENCRYPTION_KEY || JWT_SECRET).digest();
+const encryptSecret = (plain) => {
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+    const enc = Buffer.concat([cipher.update(String(plain), 'utf8'), cipher.final()]);
+    return `enc:${iv.toString('hex')}:${cipher.getAuthTag().toString('hex')}:${enc.toString('hex')}`;
+};
+const decryptSecret = (value) => {
+    if (typeof value !== 'string' || !value.startsWith('enc:')) return value; // legacy plain value
+    const [, iv, tag, data] = value.split(':');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', ENC_KEY, Buffer.from(iv, 'hex'));
+    decipher.setAuthTag(Buffer.from(tag, 'hex'));
+    return Buffer.concat([decipher.update(Buffer.from(data, 'hex')), decipher.final()]).toString('utf8');
+};
+
+// Access key that lets a customer (or the admin) open one specific invoice/status link without logging in
+const orderAccessKey = (orderId) => crypto.createHmac('sha256', JWT_SECRET).update(`order:${orderId}`).digest('hex').slice(0, 24);
+const validOrderKey = (orderId, key) => {
+    if (typeof key !== 'string' || !key) return false;
+    const expected = orderAccessKey(orderId);
+    return key.length === expected.length && crypto.timingSafeEqual(Buffer.from(key), Buffer.from(expected));
+};
 
 // --- Security: Strict OTP Rate Limiting (Max 3 requests per 12 hours) ---
 async function checkOtpRateLimit(identifier) {
@@ -144,7 +218,14 @@ async function checkOtpRateLimit(identifier) {
 }
 
 const rootDir = path.join(__dirname, '..');
-app.use(express.static(rootDir));
+// Serve only the public website files - never source, config, database or package files.
+const PUBLIC_PATH = /^\/(?:[A-Za-z0-9_-]+\.html|assets\/.+|images\/.+|favicon\.[a-z]+|robots\.txt|sitemap\.xml)$/;
+const staticFiles = express.static(rootDir, { dotfiles: 'deny', index: false });
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) return next(); // API routes only - never serve files from /api
+    if (req.path === '/' || PUBLIC_PATH.test(req.path)) return staticFiles(req, res, next);
+    return res.status(404).sendFile(path.join(rootDir, '404.html'));
+});
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(rootDir, 'index.html'));
@@ -166,10 +247,28 @@ const authenticateUser = async (req, res, next) => {
     }
 };
 
+// Admin-only guard: valid admin token AND the admin account still exists and is not blocked
+const adminOnly = [authenticateUser, async (req, res, next) => {
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Forbidden. Admin access required.' });
+    }
+    try {
+        const adminDoc = await db.collection('admins').doc(req.user.id).get();
+        if (!adminDoc.exists || adminDoc.data().is_blocked) {
+            return res.status(403).json({ success: false, error: 'Admin account is not active.' });
+        }
+        next();
+    } catch (err) {
+        console.error('[Admin Guard Error]:', err);
+        res.status(500).json({ success: false, error: 'Authorization check failed.' });
+    }
+}];
+
 // --- In-Memory Settings Cache for 0ms Latency ---
 let cachedFrontendSettings = null;
 let lastSettingsFetchTime = 0;
-const SETTINGS_CACHE_TTL = 30000; // 30 seconds TTL
+// Serverless runs several instances, each with its own memory, so keep the cache very short-lived
+const SETTINGS_CACHE_TTL = 3000; // 3 seconds TTL
 
 async function fetchSettingsFromDb() {
     try {
@@ -203,40 +302,36 @@ async function getStoreBookPrice() {
 // Settings GET Endpoint (Serves instantly from Memory Cache)
 app.get('/api/settings/frontend', async (req, res) => {
     if (cachedFrontendSettings && (Date.now() - lastSettingsFetchTime < SETTINGS_CACHE_TTL)) {
-        res.json({ success: true, settings: cachedFrontendSettings });
-        // Background refresh if older than 5 seconds
-        if (Date.now() - lastSettingsFetchTime > 5000) {
-            fetchSettingsFromDb().catch(() => {});
-        }
-        return;
+        res.set('Cache-Control', 'no-store');
+        return res.json({ success: true, settings: cachedFrontendSettings });
     }
     const settings = await fetchSettingsFromDb();
+    res.set('Cache-Control', 'no-store');
     return res.json({ success: true, settings });
 });
 
 // Settings PUT Endpoint (Updates Memory Cache instantly + Persists to DB)
-app.put('/api/settings/frontend', async (req, res) => {
+app.put('/api/settings/frontend', adminOnly, async (req, res) => {
     try {
         const { isOrderNowEnabled, bookPrice } = req.body;
-        const currentSettings = cachedFrontendSettings || await fetchSettingsFromDb();
-        const updateData = { ...currentSettings };
-
+        // Only write the fields that were actually sent. Writing the whole cached object
+        // would overwrite the other setting (e.g. price) with this instance's stale copy.
+        const changes = {};
         if (isOrderNowEnabled !== undefined) {
-            updateData.isOrderNowEnabled = !!isOrderNowEnabled;
+            changes.isOrderNowEnabled = !!isOrderNowEnabled;
         }
         if (bookPrice !== undefined) {
             const parsedPrice = parseInt(bookPrice, 10);
             if (!isNaN(parsedPrice) && parsedPrice > 0) {
-                updateData.bookPrice = parsedPrice;
+                changes.bookPrice = parsedPrice;
             }
         }
 
-        // 1. Immediately update in-memory cache for 0ms response on subsequent GETs
-        cachedFrontendSettings = updateData;
-        lastSettingsFetchTime = Date.now();
+        // 1. Persist to Firestore DB (source of truth)
+        await db.collection('settings').doc('frontend').set(changes, { merge: true });
 
-        // 2. Persist to Firestore DB
-        await db.collection('settings').doc('frontend').set(updateData, { merge: true });
+        // 2. Reload the merged result so the cache and response reflect the stored values
+        const updateData = await fetchSettingsFromDb();
 
         return res.json({ success: true, settings: updateData });
     } catch (err) {
@@ -442,10 +537,6 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
 // --- NEW AUTHENTICATION FLOW (SIGNUP & PASSWORD LOGIN) ---
 
-const hashPassword = (password) => {
-    return crypto.createHash('sha256').update(password).digest('hex');
-};
-
 // Signup - Send OTP
 app.post('/api/auth/send-signup-otp', async (req, res) => {
     try {
@@ -576,8 +667,9 @@ app.post('/api/auth/check-signup-mobile-otp', async (req, res) => {
         const sessionDoc = await db.collection('otp_sessions').doc(cleanMobile).get();
         const session = sessionDoc.exists ? sessionDoc.data() : null;
         
-        if (!session || session.otp_code !== otp || Date.now() > session.expires_at) {
-            return res.status(400).json({ success: false, error: 'Invalid or expired Mobile OTP.' });
+        const chk = await checkOtpWithLimit('otp_sessions', cleanMobile, session, otp);
+        if (!chk.ok) {
+            return res.status(400).json({ success: false, error: chk.error });
         }
 
         // Mark as verified but don't delete yet
@@ -639,8 +731,9 @@ app.post('/api/auth/check-signup-email-otp', async (req, res) => {
         const sessionDoc = await db.collection('email_otp_sessions').doc(cleanEmail).get();
         const session = sessionDoc.exists ? sessionDoc.data() : null;
         
-        if (!session || session.otp_code !== otp || Date.now() > session.expires_at) {
-            return res.status(400).json({ success: false, error: 'Invalid or expired Email OTP.' });
+        const chk = await checkOtpWithLimit('email_otp_sessions', cleanEmail, session, otp);
+        if (!chk.ok) {
+            return res.status(400).json({ success: false, error: chk.error });
         }
 
         // Mark as verified
@@ -680,12 +773,16 @@ app.post('/api/auth/verify-signup', async (req, res) => {
         if (cleanEmail) {
             const emailSessionDoc = await db.collection('email_otp_sessions').doc(cleanEmail).get();
             const emailSession = emailSessionDoc.exists ? emailSessionDoc.data() : null;
-            if (emailSession && !emailSession.is_verified) {
-                const providedEmailOtp = (emailOtp || otp || '').trim();
-                if (emailSession.otp_code === providedEmailOtp) {
-                    await db.collection('email_otp_sessions').doc(cleanEmail).delete();
+            if (!emailSession || Date.now() > (emailSession.expires_at || 0)) {
+                return res.status(400).json({ success: false, error: 'Email OTP expired or not found. Please verify your email again.' });
+            }
+            if (!emailSession.is_verified) {
+                const providedEmailOtp = String(emailOtp || '').trim();
+                if (emailSession.otp_code !== providedEmailOtp) {
+                    return res.status(400).json({ success: false, error: 'Invalid Email OTP code.' });
                 }
             }
+            await db.collection('email_otp_sessions').doc(cleanEmail).delete();
         }
 
         await db.collection('otp_sessions').doc(cleanMobile).delete();
@@ -752,6 +849,12 @@ app.post('/api/auth/login-password', async (req, res) => {
         const cleanEmail = trimmedIdentifier.toLowerCase();
         let user = null;
 
+        const lockKey = trimmedIdentifier.includes('@') ? cleanEmail : (cleanEmail.replace(/\D/g, '').slice(-10) || cleanEmail);
+        const lock = await checkLoginLock('user', lockKey);
+        if (lock.locked) {
+            return res.status(429).json({ success: false, error: lock.error });
+        }
+
         if (trimmedIdentifier.includes('@')) {
             // Search strictly by email
             const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
@@ -784,9 +887,14 @@ app.post('/api/auth/login-password', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Password not set for this Google account. Please click "Sign in with Google" or use "Forgot Password".' });
         }
 
-        const passwordHash = hashPassword(password);
-        if (user.password_hash !== passwordHash) {
+        const pw = verifyPassword(password, user.password_hash);
+        if (!pw.ok) {
+            await recordLoginFailure(lock);
             return res.status(400).json({ success: false, error: 'Invalid credentials.' });
+        }
+        await clearLoginFailures(lock);
+        if (pw.needsUpgrade) {
+            await db.collection('users').doc(user.id).update({ password_hash: hashPassword(password) }).catch(() => {});
         }
 
         const token = jwt.sign({ id: user.id, mobile: user.mobile || '', name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
@@ -797,13 +905,28 @@ app.post('/api/auth/login-password', async (req, res) => {
     }
 });
 
+// Verify a Firebase ID token (from Google sign-in) and return the Google-verified email
+async function verifyGoogleIdToken(idToken) {
+    if (!idToken || typeof idToken !== 'string') return null;
+    try {
+        const decoded = await getAuth().verifyIdToken(idToken);
+        if (!decoded.email || decoded.email_verified === false) return null;
+        return { email: decoded.email.toLowerCase(), name: decoded.name || '', uid: decoded.uid };
+    } catch (err) {
+        console.warn('[Google ID token rejected]:', err.message);
+        return null;
+    }
+}
+
 // Google Login Endpoint
 app.post('/api/auth/google-login', async (req, res) => {
     try {
-        const { email, name, firebaseUid } = req.body;
-        if (!email) return res.status(400).json({ success: false, error: 'Google email is required.' });
+        const { name, idToken } = req.body;
+        const google = await verifyGoogleIdToken(idToken);
+        if (!google) return res.status(401).json({ success: false, error: 'Google sign-in could not be verified. Please try again.' });
 
-        const cleanEmail = email.trim().toLowerCase();
+        const cleanEmail = google.email;
+        const firebaseUid = google.uid;
         const userQ = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
         
         if (!userQ.empty) {
@@ -847,7 +970,7 @@ app.post('/api/auth/google-login', async (req, res) => {
             success: true,
             isNewUser: true,
             email: cleanEmail,
-            name: name || 'Google User',
+            name: name || google.name || 'Google User',
             firebaseUid: firebaseUid || ''
         });
     } catch (err) {
@@ -859,9 +982,11 @@ app.post('/api/auth/google-login', async (req, res) => {
 // Complete Google Signup (Set Password & Mobile)
 app.post('/api/auth/google-signup-complete', async (req, res) => {
     try {
-        const { email, name, mobile, password, otp } = req.body;
+        const { name, mobile, password, otp, idToken } = req.body;
+        const google = await verifyGoogleIdToken(idToken);
+        if (!google) return res.status(401).json({ success: false, error: 'Google sign-in could not be verified. Please sign in with Google again.' });
         const cleanMobile = (mobile || '').replace(/\D/g, '').slice(-10);
-        const cleanEmail = (email || '').trim().toLowerCase();
+        const cleanEmail = google.email;
 
         if (!cleanEmail || !password || !cleanMobile || !otp) {
             return res.status(400).json({ success: false, error: 'Email, password, mobile, and OTP are required.' });
@@ -870,7 +995,16 @@ app.post('/api/auth/google-signup-complete', async (req, res) => {
         // Verify OTP from otp_sessions
         const sessionDoc = await db.collection('otp_sessions').doc(cleanMobile).get();
         const session = sessionDoc.exists ? sessionDoc.data() : null;
-        if (!session || session.otp_code !== otp || Date.now() > session.expires_at) {
+        if (!session || Date.now() > session.expires_at) {
+            return res.status(400).json({ success: false, error: 'Invalid or expired OTP.' });
+        }
+        if (session.otp_code !== otp) {
+            const nextAttempts = (session.attempts || 0) + 1;
+            if (nextAttempts >= 3) {
+                await db.collection('otp_sessions').doc(cleanMobile).delete();
+                return res.status(400).json({ success: false, error: 'Too many incorrect attempts. Please request a new OTP.' });
+            }
+            await db.collection('otp_sessions').doc(cleanMobile).update({ attempts: nextAttempts });
             return res.status(400).json({ success: false, error: 'Invalid or expired OTP.' });
         }
 
@@ -1044,8 +1178,9 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
 
         const sessionDoc = await db.collection('email_otp_sessions').doc(email.trim().toLowerCase()).get();
         const session = sessionDoc.exists ? sessionDoc.data() : null;
-        if (!session || session.otp_code !== otp || Date.now() > session.expires_at) {
-            return res.status(400).json({ success: false, error: 'Invalid or expired OTP.' });
+        const chk = await checkOtpWithLimit('email_otp_sessions', email.trim().toLowerCase(), session, otp);
+        if (!chk.ok) {
+            return res.status(400).json({ success: false, error: chk.error });
         }
 
         // Keep session alive for the final reset-password call
@@ -1064,10 +1199,15 @@ app.post('/api/auth/reset-password', async (req, res) => {
             return res.status(400).json({ success: false, error: 'All fields are required.' });
         }
 
+        if (String(newPassword).length < 6) {
+            return res.status(400).json({ success: false, error: 'Password must be at least 6 characters.' });
+        }
+
         const sessionDoc = await db.collection('email_otp_sessions').doc(email.trim().toLowerCase()).get();
         const session = sessionDoc.exists ? sessionDoc.data() : null;
-        if (!session || session.otp_code !== otp || Date.now() > session.expires_at) {
-            return res.status(400).json({ success: false, error: 'Invalid or expired OTP.' });
+        const chk = await checkOtpWithLimit('email_otp_sessions', email.trim().toLowerCase(), session, otp);
+        if (!chk.ok || !session.user_id) {
+            return res.status(400).json({ success: false, error: chk.error || 'Invalid or expired OTP.' });
         }
 
         await db.collection('email_otp_sessions').doc(email.trim().toLowerCase()).delete();
@@ -1083,62 +1223,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 // Firebase Authenticated Login Endpoint
-app.post('/api/auth/firebase-login', async (req, res) => {
-    try {
-        const { mobile, name, firebaseUid } = req.body;
-        const cleanMobile = (mobile || '').replace(/\D/g, '').slice(-10);
-
-        if (!cleanMobile) {
-            return res.status(400).json({ success: false, error: 'Mobile number is required.' });
-        }
-
-        const userQ = await db.collection('users').where('mobile', '==', cleanMobile).limit(1).get();
-        let user = userQ.empty ? null : { id: userQ.docs[0].id, ...userQ.docs[0].data() };
-
-        if (user && user.is_blocked === 1) {
-            return res.status(403).json({ success: false, error: 'Your account has been blocked by administrator. Please contact support.' });
-        }
-        if (user && user.account_status === 'deleted') {
-            return res.status(403).json({ success: false, error: 'Account not found or deleted.' });
-        }
-
-        const userName = (name || (user ? user.name : 'Customer')).trim();
-
-        if (!user) {
-            const userId = 'USR-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-            const now = new Date().toISOString();
-            user = { id: userId, name: userName, mobile: cleanMobile, email: '', address: '', city: '', pincode: '', is_blocked: 0, account_status: 'active', created_at: now, is_mobile_verified: 1, is_email_verified: 0 };
-            await db.collection('users').doc(userId).set(user);
-        } else if (name && name.trim() && user.name !== name.trim()) {
-            await db.collection('users').doc(user.id).update({ name: name.trim() });
-            user.name = name.trim();
-        }
-
-        const token = jwt.sign(
-            { id: user.id, mobile: user.mobile, name: user.name, firebaseUid: firebaseUid || '' },
-            JWT_SECRET,
-            { expiresIn: '30d' }
-        );
-
-        res.json({
-            success: true,
-            message: 'Firebase OTP verification successful!',
-            token,
-            user: {
-                id: user.id,
-                name: user.name,
-                mobile: user.mobile,
-                email: user.email,
-                address: user.address,
-                city: user.city,
-                pincode: user.pincode
-            }
-        });
-    } catch (err) {
-        console.error('[Firebase Login Error]:', err);
-        res.status(500).json({ success: false, error: 'Server error during Firebase user registration/login.' });
-    }
-});
+// (removed) /api/auth/firebase-login: it issued tokens for any mobile number without verification.
 
 // Get Profile
 app.get('/api/auth/profile', authenticateUser, async (req, res) => {
@@ -1410,81 +1495,70 @@ app.get('/api/vouchers/my-vouchers', authenticateUser, async (req, res) => {
 });
 
 // Apply & Validate Voucher Code with Usage & Expiry Checks
-app.post('/api/vouchers/apply', async (req, res) => {
+// Shared voucher check: assigned to this customer, active, not used before, minimum order met
+async function evaluateVoucher({ code, subtotal, mobile, userId }) {
+    const cleanCode = String(code || '').trim().toUpperCase();
+    const userMobile = String(mobile || '').replace(/\D/g, '').slice(-10);
+    if (!cleanCode) return { error: 'Please enter a valid voucher code.' };
+    if (!userMobile) return { error: 'Invalid voucher code or it is not assigned to your account.' };
+
+    const vQuery = await db.collection('vouchers')
+        .where('is_active', '==', 1)
+        .where('assigned_mobile', '==', userMobile)
+        .get();
+    let voucher = null;
+    vQuery.forEach(doc => {
+        if (String(doc.data().code || '').toUpperCase() === cleanCode) voucher = { id: doc.id, ...doc.data() };
+    });
+    if (!voucher) return { error: 'Invalid voucher code or it is not assigned to your account.' };
+
+    // Already used in a previous (non-cancelled) order?
+    const used = new Map();
+    const q1 = await db.collection('orders').where('shipping_mobile', '==', userMobile).get();
+    q1.forEach(d => used.set(d.id, d.data()));
+    if (userId) {
+        const q2 = await db.collection('orders').where('user_id', '==', userId).get();
+        q2.forEach(d => used.set(d.id, d.data()));
+    }
+    for (const [id, o] of used) {
+        if (o.status === 'CANCELLED' || !o.applied_voucher) continue;
+        const codes = String(o.applied_voucher).split(',').map(c => c.trim().toUpperCase());
+        if (codes.includes(cleanCode)) {
+            return { error: `You have already used voucher "${cleanCode}" in a previous order (#${id}).` };
+        }
+    }
+
+    if (subtotal < (voucher.min_order_amount || 0)) {
+        return { error: `Voucher "${voucher.code}" requires a minimum order of ₹${voucher.min_order_amount}.` };
+    }
+
+    let discount = 0;
+    if (voucher.discount_type === 'FLAT') discount = Number(voucher.discount_value) || 0;
+    else if (voucher.discount_type === 'PERCENT') discount = Math.round((subtotal * (Number(voucher.discount_value) || 0)) / 100);
+    discount = Math.max(0, Math.min(discount, subtotal));
+
+    return { voucher, cleanCode, discount };
+}
+
+// Apply a voucher (preview only - the price is always recalculated on the server when the order is created)
+app.post('/api/vouchers/apply', authenticateUser, async (req, res) => {
     try {
-        const { code, cartAmount, mobile, userId } = req.body;
-        const cleanCode = (code || '').trim().toUpperCase();
-        const userMobile = (mobile || '').replace(/\D/g, '').slice(-10);
-
-        if (!cleanCode) {
-            return res.status(400).json({ success: false, error: 'Please enter a valid voucher code.' });
-        }
-
-        // 1. Query for exact matching assigned personal voucher
-        const vQuery = await db.collection('vouchers')
-            .where('is_active', '==', 1)
-            .where('assigned_mobile', '==', userMobile)
-            .get();
-        
-        let voucher = null;
-        vQuery.forEach(doc => {
-            if (doc.data().code.toUpperCase() === cleanCode) {
-                voucher = { id: doc.id, ...doc.data() };
-            }
-        });
-
-        if (!voucher) {
-            return res.status(400).json({ success: false, error: 'Invalid voucher code or it is not assigned to your account.' });
-        }
-
-        // 3. Check if User Has Already Used This Voucher in a Previous Order
-        if (userMobile || userId) {
-            // Firestore doesn't support complex OR with LIKE. We fetch all non-cancelled orders for user and check in memory
-            let userOrders = [];
-            if (userMobile) {
-                const q1 = await db.collection('orders').where('shipping_mobile', '==', userMobile).get();
-                q1.forEach(d => { if (d.data().status !== 'CANCELLED') userOrders.push({id: d.id, ...d.data()}) });
-            }
-            if (userId) {
-                const q2 = await db.collection('orders').where('user_id', '==', userId).get();
-                q2.forEach(d => { if (d.data().status !== 'CANCELLED' && !userOrders.find(o => o.id === d.id)) userOrders.push({id: d.id, ...d.data()}) });
-            }
-
-            const previousUsage = userOrders.find(o => o.applied_voucher && o.applied_voucher.toUpperCase().includes(cleanCode));
-
-            if (previousUsage) {
-                return res.status(400).json({
-                    success: false,
-                    error: `You have already used voucher "${cleanCode}" in a previous order (#${previousUsage.id}).`
-                });
-            }
-        }
-
-        // 4. Check Minimum Order Amount
+        const { code, cartAmount } = req.body;
         const defaultBookPrice = await getStoreBookPrice();
-        const amount = parseInt(cartAmount || defaultBookPrice, 10);
-        if (amount < voucher.min_order_amount) {
-            return res.status(400).json({
-                success: false,
-                error: `Voucher "${voucher.code}" requires a minimum order of ₹${voucher.min_order_amount}.`
-            });
-        }
+        const requested = parseInt(cartAmount || defaultBookPrice, 10);
+        const amount = Number.isFinite(requested) && requested > 0 ? requested : defaultBookPrice;
 
-        // 5. Calculate Discount
-        let discount = 0;
-        if (voucher.discount_type === 'FLAT') {
-            discount = voucher.discount_value;
-        } else if (voucher.discount_type === 'PERCENT') {
-            discount = Math.round((amount * voucher.discount_value) / 100);
+        const result = await evaluateVoucher({ code, subtotal: amount, mobile: req.user.mobile, userId: req.user.id });
+        if (result.error) {
+            return res.status(400).json({ success: false, error: result.error });
         }
-
         res.json({
             success: true,
-            code: voucher.code,
-            rawCode: cleanCode,
-            discount: discount,
-            finalAmount: Math.max(0, amount - discount),
-            message: `Voucher ${cleanCode} applied! You saved ₹${discount}.`
+            code: result.voucher.code,
+            rawCode: result.cleanCode,
+            discount: result.discount,
+            finalAmount: Math.max(0, amount - result.discount),
+            message: `Voucher ${result.cleanCode} applied! You saved ₹${result.discount}.`
         });
     } catch (err) {
         console.error('[Apply Voucher Error]:', err);
@@ -1496,67 +1570,51 @@ app.post('/api/vouchers/apply', async (req, res) => {
 // 3. ORDERS MODULE (/api/orders)
 // ==========================================
 
-// Create Draft Order
-app.post('/api/orders/create', async (req, res) => {
+// Create Draft Order (login required; price and discount are always computed on the server)
+app.post('/api/orders/create', authenticateUser, async (req, res) => {
     try {
         const { quantity, shippingName, shippingMobile, shippingAddress, shippingCity, shippingState, shippingPincode, voucherCode, paymentMethod } = req.body;
-        
-        // Optional auth
-        let userId = 'GUEST-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-        let userName = 'Guest';
-        let userMobile = '';
-        
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const decoded = jwt.verify(token, JWT_SECRET);
-                userId = decoded.id;
-                userName = decoded.name;
-                userMobile = decoded.mobile;
-            } catch (err) {}
-        }
 
-        const qty = Math.max(1, parseInt(quantity || 1, 10));
+        const userId = req.user.id;
+        const userName = req.user.name || 'Customer';
+        const userMobile = req.user.mobile || '';
+
+        const qty = Math.min(100, Math.max(1, parseInt(quantity || 1, 10) || 1));
         const unitPrice = await getStoreBookPrice();
         const subtotal = qty * unitPrice;
 
         let discount = 0;
+        let appliedVoucher = '';
         if (voucherCode) {
-            const vQuery = await db.collection('vouchers').where('is_active', '==', 1).get();
-            let v = null;
-            vQuery.forEach(doc => {
-                if (doc.data().code.toUpperCase() === voucherCode.toUpperCase()) {
-                    v = { id: doc.id, ...doc.data() };
-                }
-            });
-            if (v && subtotal >= v.min_order_amount) {
-                discount = v.discount_type === 'FLAT' ? v.discount_value : Math.round((subtotal * v.discount_value) / 100);
+            const result = await evaluateVoucher({ code: voucherCode, subtotal, mobile: userMobile, userId });
+            if (result.error) {
+                return res.status(400).json({ success: false, error: result.error });
             }
+            discount = result.discount;
+            appliedVoucher = result.voucher.code;
         }
 
         const totalAmount = Math.max(0, subtotal - discount);
-        
-        // Firestore: Since we cannot do ORDER BY CAST easily, we'll just query all orders, or use a counter document
+
+        // Atomic order number (two simultaneous orders can never get the same number)
         const counterDocRef = db.collection('metadata').doc('order_counter');
-        const counterDoc = await counterDocRef.get();
-        let currentSeq = 2101;
-        if (counterDoc.exists) {
-            currentSeq = counterDoc.data().last_seq + 1;
-        }
-        await counterDocRef.set({ last_seq: currentSeq });
-        let orderId = 'JP-KD' + currentSeq;
-        
+        const orderId = await db.runTransaction(async (t) => {
+            const counterDoc = await t.get(counterDocRef);
+            const nextSeq = counterDoc.exists ? counterDoc.data().last_seq + 1 : 2101;
+            t.set(counterDocRef, { last_seq: nextSeq });
+            return 'JP-KD' + nextSeq;
+        });
+
         const now = new Date().toISOString();
 
         const createdOrder = {
             id: orderId, user_id: userId, book_title: 'ब्रह्मांशावतार श्री खेतेश्वर दाता', quantity: qty, unit_price: unitPrice, discount_amount: discount, total_amount: totalAmount,
-            applied_voucher: voucherCode || '', shipping_name: shippingName || userName, shipping_mobile: shippingMobile || userMobile, shipping_address: shippingAddress || '', shipping_city: shippingCity || '',
+            applied_voucher: appliedVoucher, shipping_name: shippingName || userName, shipping_mobile: shippingMobile || userMobile, shipping_address: shippingAddress || '', shipping_city: shippingCity || '',
             shipping_state: shippingState || 'Rajasthan', shipping_pincode: shippingPincode || '', payment_method: paymentMethod || 'UPI', status: 'PENDING', created_at: now
         };
 
         await db.collection('orders').doc(orderId).set(createdOrder);
-        res.json({ success: true, order: createdOrder });
+        res.json({ success: true, order: { ...createdOrder, access_key: orderAccessKey(orderId) } });
     } catch (err) {
         console.error('[Create Order Error]:', err);
         res.status(500).json({ success: false, error: 'Failed to create order.' });
@@ -1570,18 +1628,17 @@ app.get('/api/orders/my-orders', authenticateUser, async (req, res) => {
         const snapshot = await db.collection('orders').where('user_id', '==', userId).get();
         let orders = snapshot.empty ? [] : snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        // Fetch transactions for these orders
+        // Fetch transactions for these orders only (Firestore 'in' allows 10 ids per query)
         if (orders.length > 0) {
-            const orderIds = orders.map(o => o.id);
-            // Firestore 'in' query supports max 10, so we just fetch all transactions for this user's orders or chunk it
-            const tSnapshot = await db.collection('transactions').get(); // simplistic for now, or we can loop
-            const txns = tSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            orders = orders.map(o => {
-                const t = txns.find(tx => tx.order_id === o.id);
-                return { ...o, transaction_id: t ? t.id : null };
-            });
+            const txnByOrder = {};
+            for (let i = 0; i < orders.length; i += 10) {
+                const chunk = orders.slice(i, i + 10).map(o => o.id);
+                const tSnapshot = await db.collection('transactions').where('order_id', 'in', chunk).get();
+                tSnapshot.forEach(d => { if (!txnByOrder[d.data().order_id]) txnByOrder[d.data().order_id] = d.id; });
+            }
+            orders = orders.map(o => ({ ...o, transaction_id: txnByOrder[o.id] || null, access_key: orderAccessKey(o.id) }));
         }
-        
+
         orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         res.json({ success: true, orders });
     } catch (err) {
@@ -1618,7 +1675,21 @@ app.get('/api/orders/:id', authenticateUser, async (req, res) => {
     }
 });
 
-// Get Public Order Details (For Invoice/Bill viewing - STRICT PAID CHECK)
+// Optional login: returns the decoded token or null
+function optionalUser(req) {
+    const h = req.headers.authorization;
+    if (!h || !h.startsWith('Bearer ')) return null;
+    try { return jwt.verify(h.split(' ')[1], JWT_SECRET); } catch (e) { return null; }
+}
+// Who may see an order: its owner, an admin, or someone holding the order's access key
+function canAccessOrder(orderData, orderId, user, key) {
+    if (user && user.role === 'admin') return true;
+    if (user && (orderData.user_id === user.id || (user.mobile && orderData.shipping_mobile === user.mobile))) return true;
+    return validOrderKey(orderId, key);
+}
+const isPaidStatus = (status) => ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(status);
+
+// Get Order Details for Invoice/Bill viewing (paid orders only; owner, admin or access key)
 app.get('/api/orders/:id/public', async (req, res) => {
     try {
         const { id } = req.params;
@@ -1627,7 +1698,10 @@ app.get('/api/orders/:id/public', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Order not found.' });
         }
         const orderData = orderDoc.data();
-        const isPaid = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(orderData.status);
+        if (!canAccessOrder(orderData, id, optionalUser(req), req.query.key)) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+        const isPaid = isPaidStatus(orderData.status);
 
         if (!isPaid) {
             return res.status(400).json({ 
@@ -1649,16 +1723,16 @@ app.get('/api/orders/:id/public', async (req, res) => {
     }
 });
 
-// Get Public Order Status (For Order Confirmation Verification)
+// Get Order Status (For Order Confirmation Verification; owner, admin or access key)
 app.get('/api/orders/:id/status', async (req, res) => {
     try {
         const { id } = req.params;
         const orderDoc = await db.collection('orders').doc(id).get();
-        if (!orderDoc.exists) {
+        if (!orderDoc.exists || !canAccessOrder(orderDoc.data(), id, optionalUser(req), req.query.key)) {
             return res.status(404).json({ success: false, error: 'Order not found.' });
         }
         const order = { id: orderDoc.id, ...orderDoc.data() };
-        const isPaid = ['PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED'].includes(order.status);
+        const isPaid = isPaidStatus(order.status);
         res.json({
             success: true,
             orderId: id,
@@ -1676,13 +1750,13 @@ app.get('/api/orders/:id/status', async (req, res) => {
     }
 });
 
-// Update Order with Manual UTR (Direct UPI) - SECURE PENDING_VERIFICATION FLOW
-app.put('/api/orders/:id/utr', async (req, res) => {
+// Update Order with Manual UTR (Direct UPI) - only the order's owner, only while the order is unpaid
+app.put('/api/orders/:id/utr', authenticateUser, async (req, res) => {
     try {
         const { id } = req.params;
         const { utr, paymentMethod } = req.body;
 
-        if (!utr || String(utr).trim().length < 6) {
+        if (!utr || !/^[A-Za-z0-9]{6,30}$/.test(String(utr).trim())) {
             return res.status(400).json({ success: false, error: 'Invalid UTR reference number.' });
         }
 
@@ -1691,6 +1765,12 @@ app.put('/api/orders/:id/utr', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Order not found.' });
         }
         const order = { id: orderDoc.id, ...orderDoc.data() };
+        if (order.user_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: 'Unauthorized for this order.' });
+        }
+        if (!['PENDING', 'PENDING_VERIFICATION'].includes(order.status)) {
+            return res.status(400).json({ success: false, error: 'This order is not awaiting payment.' });
+        }
 
         // Create a transaction record manually for this UTR marked PENDING_VERIFICATION
         const txnId = 'TXN-' + crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -1726,25 +1806,38 @@ app.put('/api/orders/:id/utr', async (req, res) => {
 });
 
 // ==========================================
-// 4. RAZERPAY & PAYMENT GATEWAY (/api/payment)
+// 4. RAZORPAY & PAYMENT GATEWAY (/api/payment)
 // ==========================================
 
-// Create Razorpay Order
-app.post('/api/payment/razorpay/create-order', async (req, res) => {
+const getRazorpayCreds = () => ({
+    keyId: process.env.RAZORPAY_KEY_ID,
+    keySecret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// Create Razorpay Order (owner only; amount comes from our stored order, never from the browser)
+app.post('/api/payment/razorpay/create-order', authenticateUser, async (req, res) => {
     try {
         const { orderId } = req.body;
-        const orderDoc = await db.collection('orders').doc(orderId).get();
+        const orderDoc = await db.collection('orders').doc(String(orderId || '')).get();
         if (!orderDoc.exists) {
             return res.status(404).json({ success: false, error: 'Order not found.' });
         }
         const order = { id: orderDoc.id, ...orderDoc.data() };
+        if (order.user_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: 'Unauthorized for this order.' });
+        }
+        if (order.status !== 'PENDING') {
+            return res.status(400).json({ success: false, error: 'This order cannot be paid (already paid or closed).' });
+        }
 
         const amountPaise = Math.round(order.total_amount * 100);
-        const rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_TOk3EEZaStpxe9';
-        const rzpKeySecret = process.env.RAZORPAY_KEY_SECRET || 'MVnpUGCcb74FITZs4iXfWlZu';
+        const { keyId: rzpKeyId, keySecret: rzpKeySecret } = getRazorpayCreds();
 
-        if (!rzpKeyId || !rzpKeySecret || rzpKeySecret === 'YOUR_RAZORPAY_SECRET_HERE') {
+        if (!rzpKeyId || !rzpKeySecret) {
             return res.status(500).json({ success: false, error: 'Razorpay API credentials not configured properly in server environment.' });
+        }
+        if (amountPaise < 100) {
+            return res.status(400).json({ success: false, error: 'Order total is too low to pay online.' });
         }
 
         let rzpOrderId = null;
@@ -1767,6 +1860,9 @@ app.post('/api/payment/razorpay/create-order', async (req, res) => {
             return res.status(400).json({ success: false, error: errMsg });
         }
 
+        // Remember which Razorpay order belongs to this order, so a payment can't be reused elsewhere
+        await db.collection('orders').doc(order.id).update({ razorpay_order_id: rzpOrderId });
+
         res.json({
             success: true,
             key: rzpKeyId,
@@ -1775,7 +1871,8 @@ app.post('/api/payment/razorpay/create-order', async (req, res) => {
             razorpayOrderId: rzpOrderId,
             orderId: order.id,
             customerName: order.shipping_name,
-            customerMobile: order.shipping_mobile
+            customerMobile: order.shipping_mobile,
+            accessKey: orderAccessKey(order.id)
         });
     } catch (err) {
         console.error('[Razorpay Create Order Server Error]:', err);
@@ -1783,90 +1880,72 @@ app.post('/api/payment/razorpay/create-order', async (req, res) => {
     }
 });
 
-// Verify Payment HMAC Signature
-app.post('/api/payment/razorpay/verify', async (req, res) => {
-    try {
-        const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
-        const rzpSecret = process.env.RAZORPAY_KEY_SECRET || 'MVnpUGCcb74FITZs4iXfWlZu';
+// Shiprocket settings with the stored password decrypted for use
+function readShiprocketSettings(doc) {
+    const data = doc.exists ? { ...doc.data() } : {};
+    if (data.password) {
+        try { data.password = decryptSecret(data.password); } catch (e) { delete data.password; }
+    }
+    return data;
+}
 
-        if (!orderId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-            return res.status(400).json({ success: false, error: 'Missing required payment response details.' });
-        }
+// Marks an order PAID exactly once, then sends bill/WhatsApp and syncs Shiprocket.
+// Safe to call from both the browser verify step and the Razorpay webhook.
+async function finalizePaidOrder(orderId, payment) {
+    const orderRef = db.collection('orders').doc(orderId);
+    const now = new Date().toISOString();
 
-        const orderRef = db.collection('orders').doc(orderId);
-        const orderDoc = await orderRef.get();
-        if (!orderDoc.exists) {
-            return res.status(404).json({ success: false, error: 'Order not found.' });
-        }
-        const orderData = orderDoc.data();
-
-        // Verify Razorpay Order ID matches if stored
-        if (orderData.razorpay_order_id && orderData.razorpay_order_id !== razorpayOrderId) {
-            return res.status(400).json({ success: false, error: 'Payment order ID mismatch.' });
-        }
-
-        let isValid = false;
-
-        if (rzpSecret && rzpSecret !== 'YOUR_RAZORPAY_SECRET_HERE') {
-            const generatedSignature = crypto
-                .createHmac('sha256', rzpSecret)
-                .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-                .digest('hex');
-
-            isValid = (generatedSignature === razorpaySignature);
-        }
-
-        if (!isValid) {
-            return res.status(400).json({ success: false, error: 'Cryptographic payment signature verification failed.' });
-        }
-
-        // Update Order to PAID in Database
-        const trackingNo = 'PENDING';
-        const now = new Date().toISOString();
-        await orderRef.update({ 
-            status: 'PAID', 
-            tracking_number: trackingNo,
-            razorpay_payment_id: razorpayPaymentId,
-            razorpay_order_id: razorpayOrderId,
-            razorpay_signature: razorpaySignature,
+    const claimed = await db.runTransaction(async (t) => {
+        const snap = await t.get(orderRef);
+        if (!snap.exists) return false;
+        const status = snap.data().status;
+        if (isPaidStatus(status) || status === 'CANCELLED') return false;
+        t.update(orderRef, {
+            status: 'PAID',
+            tracking_number: 'PENDING',
+            razorpay_payment_id: payment.razorpayPaymentId,
+            razorpay_order_id: payment.razorpayOrderId,
+            razorpay_signature: payment.razorpaySignature || '',
             paid_at: now
         });
+        return true;
+    });
+    if (!claimed) return { alreadyProcessed: true };
 
-        // Insert Transaction Record
-        const txnId = 'TXN-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-        const updatedOrderDoc = await orderRef.get();
-        const order = { id: updatedOrderDoc.id, ...updatedOrderDoc.data() };
-        
-        await db.collection('transactions').doc(txnId).set({
-            id: txnId, order_id: orderId, razorpay_order_id: razorpayOrderId || '', razorpay_payment_id: razorpayPaymentId || '', razorpay_signature: razorpaySignature || '', payment_method: order.payment_method || 'Razorpay', amount: order.total_amount, status: 'SUCCESS', created_at: new Date().toISOString()
-        });
+    const txnId = 'TXN-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+    const updatedOrderDoc = await orderRef.get();
+    const order = { id: updatedOrderDoc.id, ...updatedOrderDoc.data() };
 
-        // Fetch user email to send bill
-        if (order.user_id && !order.user_id.startsWith('GUEST-')) {
-            try {
-                const userDoc = await db.collection('users').doc(order.user_id).get();
-                if (userDoc.exists && userDoc.data().email) {
-                    await sendOrderBillEmail(order, userDoc.data().email);
-                }
-            } catch (emailErr) {
-                console.error('[Send Bill Email Error]:', emailErr);
+    await db.collection('transactions').doc(txnId).set({
+        id: txnId, order_id: orderId, razorpay_order_id: payment.razorpayOrderId || '', razorpay_payment_id: payment.razorpayPaymentId || '', razorpay_signature: payment.razorpaySignature || '', payment_method: order.payment_method || 'Razorpay', amount: order.total_amount, status: 'SUCCESS', created_at: new Date().toISOString()
+    });
+
+    // Fetch user email to send bill
+    if (order.user_id && !order.user_id.startsWith('GUEST-')) {
+        try {
+            const userDoc = await db.collection('users').doc(order.user_id).get();
+            if (userDoc.exists && userDoc.data().email) {
+                await sendOrderBillEmail(order, userDoc.data().email);
             }
+        } catch (emailErr) {
+            console.error('[Send Bill Email Error]:', emailErr);
         }
+    }
 
-        // Also send WhatsApp Bill if mobile is available
-        if (order.shipping_mobile) {
-            try {
-                await sendWhatsAppBill(order, order.shipping_mobile);
-            } catch (waErr) {
-                console.error('[Send WhatsApp Bill Error]:', waErr);
-            }
+    // Also send WhatsApp Bill if mobile is available
+    if (order.shipping_mobile) {
+        try {
+            await sendWhatsAppBill(order, order.shipping_mobile);
+        } catch (waErr) {
+            console.error('[Send WhatsApp Bill Error]:', waErr);
         }
+    }
 
         // Auto Sync with Shiprocket if credentials configured
-        (async () => {
+        await (async () => {
             try {
                 const settingsDoc = await db.collection('settings').doc('shiprocket').get();
-                const settings = settingsDoc.exists ? settingsDoc.data() : {};
+                const settings = readShiprocketSettings(settingsDoc);
                 const hasCreds = settings.email || settings.user || process.env.SHIPROCKET_EMAIL || process.env.SHIPROCKET_USER;
                 if (hasCreds) {
                     const srRes = await createShiprocketOrder(order, settings);
@@ -1896,15 +1975,101 @@ app.post('/api/payment/razorpay/verify', async (req, res) => {
             }
         })();
 
+    return { alreadyProcessed: false };
+}
+
+const safeEqualHex = (a, b) => {
+    const x = Buffer.from(String(a || ''), 'utf8');
+    const y = Buffer.from(String(b || ''), 'utf8');
+    return x.length === y.length && crypto.timingSafeEqual(x, y);
+};
+
+// Verify Payment HMAC Signature (called by the browser right after payment)
+app.post('/api/payment/razorpay/verify', authenticateUser, async (req, res) => {
+    try {
+        const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+        const { keySecret: rzpSecret } = getRazorpayCreds();
+
+        if (!orderId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+            return res.status(400).json({ success: false, error: 'Missing required payment response details.' });
+        }
+        if (!rzpSecret) {
+            return res.status(500).json({ success: false, error: 'Payment gateway is not configured.' });
+        }
+
+        const orderRef = db.collection('orders').doc(String(orderId));
+        const orderDoc = await orderRef.get();
+        if (!orderDoc.exists) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+        const orderData = orderDoc.data();
+        if (orderData.user_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: 'Unauthorized for this order.' });
+        }
+
+        // The payment must belong to the Razorpay order we created for THIS order
+        if (!orderData.razorpay_order_id || orderData.razorpay_order_id !== razorpayOrderId) {
+            return res.status(400).json({ success: false, error: 'Payment order ID mismatch.' });
+        }
+
+        const generatedSignature = crypto
+            .createHmac('sha256', rzpSecret)
+            .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+            .digest('hex');
+        if (!safeEqualHex(generatedSignature, razorpaySignature)) {
+            return res.status(400).json({ success: false, error: 'Cryptographic payment signature verification failed.' });
+        }
+
+        await finalizePaidOrder(orderId, { razorpayOrderId, razorpayPaymentId, razorpaySignature });
+
         res.json({
             success: true,
             message: 'Payment verified successfully!',
             orderId: orderId,
-            trackingNumber: trackingNo
+            trackingNumber: 'PENDING'
         });
     } catch (err) {
         console.error('[Payment Verify Error]:', err);
         res.status(500).json({ success: false, error: 'Payment verification failed.' });
+    }
+});
+
+// Razorpay webhook: confirms payments even if the customer closes the tab before verify runs.
+// Set RAZORPAY_WEBHOOK_SECRET and point the Razorpay dashboard webhook (payment.captured / order.paid) here.
+app.post('/api/payment/razorpay/webhook', async (req, res) => {
+    try {
+        const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+        if (!secret) return res.status(503).json({ success: false, error: 'Webhook not configured.' });
+
+        const signature = req.headers['x-razorpay-signature'];
+        const expected = crypto.createHmac('sha256', secret).update(req.rawBody || Buffer.from('')).digest('hex');
+        if (!safeEqualHex(expected, signature)) {
+            return res.status(400).json({ success: false, error: 'Invalid signature.' });
+        }
+
+        const event = req.body && req.body.event;
+        if (event !== 'payment.captured' && event !== 'order.paid') {
+            return res.json({ success: true, ignored: true });
+        }
+        const payment = req.body.payload && req.body.payload.payment && req.body.payload.payment.entity;
+        if (!payment || !payment.order_id) return res.json({ success: true, ignored: true });
+
+        const snap = await db.collection('orders').where('razorpay_order_id', '==', payment.order_id).limit(1).get();
+        if (snap.empty) return res.json({ success: true, ignored: true });
+        const orderDoc = snap.docs[0];
+        const order = orderDoc.data();
+
+        // Only accept a payment that matches the exact amount we asked for
+        if (Number(payment.amount) !== Math.round(order.total_amount * 100)) {
+            console.warn(`[Razorpay Webhook]: amount mismatch for ${orderDoc.id}`);
+            return res.json({ success: true, ignored: true });
+        }
+
+        await finalizePaidOrder(orderDoc.id, { razorpayOrderId: payment.order_id, razorpayPaymentId: payment.id, razorpaySignature: 'WEBHOOK' });
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Razorpay Webhook Error]:', err);
+        res.status(500).json({ success: false });
     }
 });
 
@@ -1917,14 +2082,23 @@ app.post('/api/admin/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const cleanEmail = (email || '').trim().toLowerCase();
-        const inputHash = crypto.createHash('sha256').update(password || '').digest('hex');
+        const lock = await checkLoginLock('admin', cleanEmail);
+        if (lock.locked) {
+            return res.status(429).json({ success: false, error: lock.error });
+        }
 
         // Firestore doesn't support case-insensitive querying easily. We assume email is stored in lowercase, or we just fetch and compare
         const adminQ = await db.collection('admins').where('email', '==', cleanEmail).limit(1).get();
         const admin = adminQ.empty ? null : { id: adminQ.docs[0].id, ...adminQ.docs[0].data() };
 
-        if (!admin || admin.password_hash !== inputHash) {
+        const pw = admin ? verifyPassword(String(password || ''), admin.password_hash) : { ok: false };
+        if (!admin || !pw.ok) {
+            await recordLoginFailure(lock);
             return res.status(401).json({ success: false, error: 'Invalid admin email or password.' });
+        }
+        await clearLoginFailures(lock);
+        if (pw.needsUpgrade) {
+            await db.collection('admins').doc(admin.id).update({ password_hash: hashPassword(String(password)) }).catch(() => {});
         }
         if (admin.is_blocked) {
             return res.status(403).json({ success: false, error: 'Your admin account has been blocked by the Super Admin.' });
@@ -2021,7 +2195,7 @@ app.post('/api/admin/create-admin', authenticateUser, async (req, res) => {
         }
         
         // ONLY SUPER ADMIN (Mukesh) can create new admins
-        if (req.user.email !== 'mukeshd1008raj@gmail.com') {
+        if (String(req.user.email || '').toLowerCase() !== SUPER_ADMIN_EMAIL) {
             return res.status(403).json({ success: false, error: 'Forbidden. Only the Super Admin (Mukesh) can add new admins.' });
         }
         
@@ -2039,7 +2213,7 @@ app.post('/api/admin/create-admin', authenticateUser, async (req, res) => {
         }
 
         const adminId = 'ADM-' + crypto.randomBytes(3).toString('hex').toUpperCase();
-        const passwordHash = crypto.createHash('sha256').update(password).digest('hex');
+        const passwordHash = hashPassword(password);
 
         await db.collection('admins').doc(adminId).set({
             id: adminId, email: cleanEmail, password_hash: passwordHash, name: name.trim(), mobile: cleanMobile, created_at: new Date().toISOString(), is_blocked: 0
@@ -2053,7 +2227,7 @@ app.post('/api/admin/create-admin', authenticateUser, async (req, res) => {
 });
 
 const superAdminOnly = (req, res, next) => {
-    if (req.user.role !== 'admin' || req.user.email !== 'mukeshd1008raj@gmail.com') {
+    if (req.user.role !== 'admin' || String(req.user.email || '').toLowerCase() !== SUPER_ADMIN_EMAIL) {
         return res.status(403).json({ success: false, error: 'Forbidden. Super Admin access required.' });
     }
     next();
@@ -2113,7 +2287,7 @@ app.post('/api/admin/admins/:id/change-password', authenticateUser, superAdminOn
         const adminDoc = await db.collection('admins').doc(id).get();
         if (!adminDoc.exists) return res.status(404).json({ success: false, error: 'Admin not found.' });
         
-        const newHash = crypto.createHash('sha256').update(newPassword).digest('hex');
+        const newHash = hashPassword(newPassword);
         await db.collection('admins').doc(id).update({ password_hash: newHash });
         res.json({ success: true, message: 'Admin password changed successfully.' });
     } catch (err) {
@@ -2122,7 +2296,7 @@ app.post('/api/admin/admins/:id/change-password', authenticateUser, superAdminOn
 });
 
 // Admin Stats
-app.get('/api/admin/stats', async (req, res) => {
+app.get('/api/admin/stats', adminOnly, async (req, res) => {
     try {
         // Since we can't easily do aggregations in Firestore client without fetching, we fetch and aggregate
         const ordersSnap = await db.collection('orders').get();
@@ -2159,7 +2333,7 @@ app.get('/api/admin/stats', async (req, res) => {
 });
 
 // Admin Get All Orders with Advanced Search & Date Range Filtering (Excludes Unpaid Abandoned Checkouts by Default)
-app.get('/api/admin/orders', async (req, res) => {
+app.get('/api/admin/orders', adminOnly, async (req, res) => {
     try {
         const { search, startDate, endDate, status } = req.query;
         const snapshot = await db.collection('orders').get();
@@ -2230,12 +2404,23 @@ app.get('/api/admin/orders', async (req, res) => {
 
 
 // Admin Update Order Status & Tracking Number
-app.put('/api/admin/orders/:id/status', async (req, res) => {
+app.put('/api/admin/orders/:id/status', adminOnly, async (req, res) => {
     try {
         const { id } = req.params;
         const { status, trackingNumber } = req.body;
 
-        await db.collection('orders').doc(id).update({ status, tracking_number: trackingNumber });
+        const ALLOWED_STATUSES = ['PENDING', 'PENDING_VERIFICATION', 'PAID', 'PROCESSING', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED', 'REFUNDED'];
+        if (!ALLOWED_STATUSES.includes(status)) {
+            return res.status(400).json({ success: false, error: 'Invalid order status.' });
+        }
+        const orderCheck = await db.collection('orders').doc(id).get();
+        if (!orderCheck.exists) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+
+        const statusUpdate = { status };
+        if (trackingNumber !== undefined) statusUpdate.tracking_number = trackingNumber;
+        await db.collection('orders').doc(id).update(statusUpdate);
 
         const updatedDoc = await db.collection('orders').doc(id).get();
         const updated = { id: updatedDoc.id, ...updatedDoc.data() };
@@ -2254,7 +2439,7 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
                 (async () => {
                     try {
                         const settingsDoc = await db.collection('settings').doc('shiprocket').get();
-                        const settings = settingsDoc.exists ? settingsDoc.data() : {};
+                        const settings = readShiprocketSettings(settingsDoc);
                         const srRes = await createShiprocketOrder(updated, settings);
                         if (srRes.success) {
                             const srUpdate = {
@@ -2288,7 +2473,7 @@ app.put('/api/admin/orders/:id/status', async (req, res) => {
 });
 
 // Admin Quick Mark as Shipped (IN_TRANSIT) Checkbox Handler
-app.put('/api/admin/orders/:id/ship', async (req, res) => {
+app.put('/api/admin/orders/:id/ship', adminOnly, async (req, res) => {
     try {
         const { id } = req.params;
         const { isShipped } = req.body;
@@ -2362,8 +2547,8 @@ const getUsersHandler = async (req, res) => {
     }
 };
 
-app.get('/api/admin/users', getUsersHandler);
-app.get('/api/users', getUsersHandler);
+app.get('/api/admin/users', adminOnly, getUsersHandler);
+app.get('/api/users', adminOnly, getUsersHandler);
 
 // Admin Get Single User Details + Order History
 const getUserDetailsHandler = async (req, res) => {
@@ -2405,8 +2590,8 @@ const getUserDetailsHandler = async (req, res) => {
     }
 };
 
-app.get('/api/admin/users/:id', getUserDetailsHandler);
-app.get('/api/users/:id', getUserDetailsHandler);
+app.get('/api/admin/users/:id', adminOnly, getUserDetailsHandler);
+app.get('/api/users/:id', adminOnly, getUserDetailsHandler);
 
 // Admin Block / Unblock User
 const blockUserHandler = async (req, res) => {
@@ -2428,8 +2613,8 @@ const blockUserHandler = async (req, res) => {
     }
 };
 
-app.put('/api/admin/users/:id/block', blockUserHandler);
-app.put('/api/users/:id/block', blockUserHandler);
+app.put('/api/admin/users/:id/block', adminOnly, blockUserHandler);
+app.put('/api/users/:id/block', adminOnly, blockUserHandler);
 
 // Admin Delete User Endpoint
 const deleteUserHandler = async (req, res) => {
@@ -2443,11 +2628,11 @@ const deleteUserHandler = async (req, res) => {
     }
 };
 
-app.delete('/api/admin/users/:id', deleteUserHandler);
-app.delete('/api/users/:id', deleteUserHandler);
+app.delete('/api/admin/users/:id', adminOnly, deleteUserHandler);
+app.delete('/api/users/:id', adminOnly, deleteUserHandler);
 
 // Admin Create Voucher (Standard)
-app.post('/api/admin/vouchers', async (req, res) => {
+app.post('/api/admin/vouchers', adminOnly, async (req, res) => {
     try {
         const { code, discountType, discountValue, minOrderAmount, assignedMobile } = req.body;
         const voucherId = 'VOUCH-' + crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -2464,7 +2649,7 @@ app.post('/api/admin/vouchers', async (req, res) => {
 });
 
 // Admin Smart Bulk Voucher Targeting Engine API
-app.post('/api/admin/vouchers/smart-assign', async (req, res) => {
+app.post('/api/admin/vouchers/smart-assign', adminOnly, async (req, res) => {
     try {
         const {
             code, discountType, discountValue, minOrderAmount,
@@ -2552,7 +2737,7 @@ app.post('/api/admin/vouchers/smart-assign', async (req, res) => {
 });
 
 // Admin Get All Vouchers
-app.get('/api/admin/vouchers', async (req, res) => {
+app.get('/api/admin/vouchers', adminOnly, async (req, res) => {
     try {
         const snapshot = await db.collection('vouchers').get();
         let vouchers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -2564,7 +2749,7 @@ app.get('/api/admin/vouchers', async (req, res) => {
 });
 
 // GET /api/vouchers alias
-app.get('/api/vouchers', async (req, res) => {
+app.get('/api/vouchers', adminOnly, async (req, res) => {
     try {
         const snapshot = await db.collection('vouchers').get();
         let vouchers = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -2595,8 +2780,8 @@ const toggleVoucherStatus = async (req, res) => {
     }
 };
 
-app.put('/api/admin/vouchers/:id/status', toggleVoucherStatus);
-app.put('/api/vouchers/:id/status', toggleVoucherStatus);
+app.put('/api/admin/vouchers/:id/status', adminOnly, toggleVoucherStatus);
+app.put('/api/vouchers/:id/status', adminOnly, toggleVoucherStatus);
 
 // Delete Voucher
 const deleteVoucher = async (req, res) => {
@@ -2610,8 +2795,8 @@ const deleteVoucher = async (req, res) => {
     }
 };
 
-app.delete('/api/admin/vouchers/:id', deleteVoucher);
-app.delete('/api/vouchers/:id', deleteVoucher);
+app.delete('/api/admin/vouchers/:id', adminOnly, deleteVoucher);
+app.delete('/api/vouchers/:id', adminOnly, deleteVoucher);
 
 // Delete Account Endpoint (Soft Delete)
 app.delete('/api/account/delete', authenticateUser, async (req, res) => {
@@ -2638,7 +2823,7 @@ app.delete('/api/account/delete', authenticateUser, async (req, res) => {
 // ==========================================
 
 // 1. Create / Sync Shiprocket Order (Admin or User)
-app.post('/api/shiprocket/create-order', async (req, res) => {
+app.post('/api/shiprocket/create-order', adminOnly, async (req, res) => {
     try {
         const { orderId } = req.body;
         if (!orderId) return res.status(400).json({ success: false, error: 'Order ID is required.' });
@@ -2651,7 +2836,7 @@ app.post('/api/shiprocket/create-order', async (req, res) => {
 
         // Fetch settings if available
         const settingsDoc = await db.collection('settings').doc('shiprocket').get();
-        const settings = settingsDoc.exists ? settingsDoc.data() : {};
+        const settings = readShiprocketSettings(settingsDoc);
 
         const srRes = await createShiprocketOrder(order, settings);
 
@@ -2708,6 +2893,10 @@ app.get('/api/shiprocket/track/:orderId', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Order not found.' });
         }
 
+        if (!canAccessOrder(orderDoc.data(), orderId, optionalUser(req), req.query.key)) {
+            return res.status(404).json({ success: false, error: 'Order not found.' });
+        }
+
         const order = { id: orderDoc.id, ...orderDoc.data() };
         const awbCode = order.awb_code || (order.tracking_number !== 'PENDING' ? order.tracking_number : null);
         const srOrderId = order.shiprocket_order_id;
@@ -2727,7 +2916,7 @@ app.get('/api/shiprocket/track/:orderId', async (req, res) => {
         }
 
         const settingsDoc = await db.collection('settings').doc('shiprocket').get();
-        const settings = settingsDoc.exists ? settingsDoc.data() : {};
+        const settings = readShiprocketSettings(settingsDoc);
 
         const trackingRes = await trackShipment(awbCode, srOrderId, settings);
 
@@ -2779,8 +2968,15 @@ app.get('/api/shiprocket/track/:orderId', async (req, res) => {
 // 3. Shiprocket Webhook Endpoint for Automated Real-Time Status Updates
 app.post('/api/shiprocket/webhook', async (req, res) => {
     try {
+        // Shiprocket sends the token configured in its dashboard as the x-api-key header
+        const hookToken = process.env.SHIPROCKET_WEBHOOK_TOKEN;
+        if (!hookToken) return res.status(503).json({ success: false, error: 'Webhook not configured.' });
+        if (!safeEqualHex(req.headers['x-api-key'], hookToken)) {
+            return res.status(401).json({ success: false, error: 'Unauthorized.' });
+        }
+
         const body = req.body || {};
-        console.log('[Shiprocket Webhook Received]:', body);
+        console.log('[Shiprocket Webhook Received]:', body.order_id || body.awb || '');
 
         const orderId = body.order_id || body.custom_order_id;
         const awb = body.awb || body.awb_code;
@@ -2828,7 +3024,7 @@ app.post('/api/shiprocket/webhook', async (req, res) => {
 });
 
 // 4. Shiprocket Settings Get & Save (Admin)
-app.get('/api/admin/shiprocket/settings', async (req, res) => {
+app.get('/api/admin/shiprocket/settings', adminOnly, async (req, res) => {
     try {
         const doc = await db.collection('settings').doc('shiprocket').get();
         const data = doc.exists ? doc.data() : {};
@@ -2848,7 +3044,7 @@ app.get('/api/admin/shiprocket/settings', async (req, res) => {
     }
 });
 
-app.post('/api/admin/shiprocket/settings', async (req, res) => {
+app.post('/api/admin/shiprocket/settings', adminOnly, async (req, res) => {
     try {
         const { email, password, pickup_location, length, breadth, height, weight, auto_create_on_payment } = req.body;
         const newSettings = {
@@ -2862,13 +3058,17 @@ app.post('/api/admin/shiprocket/settings', async (req, res) => {
             updated_at: new Date().toISOString()
         };
         if (password && password.trim()) {
-            newSettings.password = password.trim();
+            newSettings.password = encryptSecret(password.trim());
         }
         await db.collection('settings').doc('shiprocket').set(newSettings, { merge: true });
         res.json({ success: true, message: 'Shiprocket settings saved successfully.', settings: newSettings });
     } catch (err) {
         res.status(500).json({ success: false, error: 'Failed to save Shiprocket settings.' });
     }
+});
+
+app.use('/api', (req, res) => {
+    res.status(404).json({ success: false, error: 'Not found.' });
 });
 
 // Export API for Vercel
