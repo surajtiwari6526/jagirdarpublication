@@ -73,3 +73,7 @@ node_modules/
 api/serviceAccountKey.json
 firebaseServiceAccount.js
 .env
+
+# Local databases / test output
+*.db
+test_res.json
