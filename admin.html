@@ -691,17 +691,6 @@
             : (window.location.hostname.includes('vercel.app') ? '' : 'https://jagirdar.vercel.app');
         const API = `${API_BASE}/api/admin`;
         let adminToken = sessionStorage.getItem('adminToken') || '';
-
-        // Every admin API call carries the admin login token (the server now requires it)
-        const _nativeFetch = window.fetch.bind(window);
-        window.fetch = (url, opts = {}) => {
-            try {
-                if (adminToken && typeof url === 'string' && url.startsWith(`${API_BASE}/api/`) && !(opts.headers && opts.headers.Authorization)) {
-                    opts = { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${adminToken}` } };
-                }
-            } catch (e) { /* fall through with original request */ }
-            return _nativeFetch(url, opts);
-        };
         let currentSelectedOrderId = null;
 
         const loginModal = document.getElementById('login-modal');

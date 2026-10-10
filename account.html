@@ -6,7 +6,7 @@
     <title>My Account - Jagirdar Publications</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -33,7 +33,6 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="assets/css/app-theme.css">
 </head>
 <body class="min-h-screen bg-brand-50 text-brand-900 font-sans">
     
@@ -1312,7 +1311,7 @@
             modal.classList.remove('hidden');
 
             try {
-                const res = await fetch(`${API_BASE}/api/shiprocket/track/${orderId}`, { headers: { 'Authorization': `Bearer ${getToken()}` } });
+                const res = await fetch(`${API_BASE}/api/shiprocket/track/${orderId}`);
                 let data = null;
                 const contentType = res.headers.get('content-type') || '';
                 if (contentType.includes('application/json')) {
